@@ -35,4 +35,3 @@ A Minecraft 1.8.9 Forge Mod for checking Hypixel UHC stats.
 
 ##  License  
 This project is licensed under the **MPL-2.0**.  
-You are free to **modify and redistribute** as long as changes remain open-source.  
