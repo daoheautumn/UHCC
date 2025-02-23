@@ -1,7 +1,7 @@
 # UHC Checker (UHCCMod)  
 A Minecraft 1.8.9 Forge Mod for checking Hypixel UHC stats.
 
-[中文版](https://github.com/daoheautumn/uhcc/blob/main/README_ZH.md).  
+[中文版](https://github.com/daoheautumn/uhcc/blob/main/README.md).  
 
 ##  Features  
 - **Player Stats Display**: Show UHC stats (stars, KDR, wins) in **chat, Tab list, and overlay**.  
