@@ -12,7 +12,7 @@ A Minecraft 1.8.9 Forge Mod for checking Hypixel UHC stats.
 ##  Commands  
 | Command | Description |
 |---------|-------------|
-| `/uc` | Toggle the mod on/off. |
+| `/uc start` | Toggle the mod on. |
 | `/uc stop` | Stop the mod and clear stats. |
 | `/uc setapi <API_KEY>` | Set your Hypixel API key. |
 | `/uc c <player>` | Manually check a player’s UHC stats. |
