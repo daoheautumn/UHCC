@@ -21,11 +21,13 @@
 | `/uc c <player>` | 查询指定玩家的 UHC 统计数据。 |
 | `/uc toggle tab` | 切换 **Tab 列表** 统计显示。 |
 | `/uc toggle overlay` | 切换 **HUD 覆盖层** 统计显示。 |
+| `/uc toggle nametag` | 切换 **玩家 Nametag 统计数据**（在头顶显示 UHC 数据）。 |
 | `/uc xpos <value>` | **调整覆盖层 X 轴位置**。 |
 | `/uc ypos <value>` | **调整覆盖层 Y 轴位置**。 |
 | `/uc size <value>` | **调整覆盖层大小**（0.01 - 1.0）。 |
 | `/uc resetpos` | **重置覆盖层位置**。 |
 | `/uc overlaymaxid <value>` | **设置覆盖层每列最大玩家数**。 |
+| `/uc nametagheight <value>` | **调整 Nametag 统计数据的高度**（默认 `0.7`，可以正负调整）。 |
 
 ## 安装
 
