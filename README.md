@@ -2,6 +2,8 @@
 
 适用于 Minecraft 1.8.9 的 Forge Mod，用于查询 Hypixel UHC 统计数据。
 
+[English](https://github.com/daoheautumn/uhcc/blob/main/README_EN.md).  
+
 ## 功能
 
 - **玩家统计显示**：在 **聊天、Tab 列表和 HUD Overlay** 中显示 UHC 统计数据（星级、KDR、胜场）。
