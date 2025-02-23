@@ -31,7 +31,7 @@ A Minecraft 1.8.9 Forge Mod for checking Hypixel UHC stats.
 4. Launch Minecraft and set your API key using `/uc setapi <your_api_key>`.  
 
 ##  Notes  
-- This mod requires a **Hypixel API key** (`/api new` in Hypixel chat).  
+- This mod requires a **Hypixel API key** ([Hypixel developer Dashboard](https://developer.hypixel.net/)).  
 
 ##  License  
 This project is licensed under the **MPL-2.0**.  
