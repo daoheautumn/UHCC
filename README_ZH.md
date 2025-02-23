@@ -35,7 +35,3 @@
 ## 注意事项
 
 - **需要 Hypixel API Key**，[Hypixel developer Dashboard](https://developer.hypixel.net/)。  
-
-## 许可证
-
-本项目基于 **MPL-2.0 许可证**，允许修改和二次开发，但必须保持开源。  
