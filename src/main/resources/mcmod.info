@@ -1,0 +1,16 @@
+[
+{
+  "modid": "uhccmod",
+  "name": "UHC Checker",
+  "description": "xwx",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "url": "https://space.bilibili.com/511496730",
+  "updateUrl": "",
+  "authorList": ["daohe"],
+  "credits": "",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}
+]

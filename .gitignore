@@ -1,0 +1,53 @@
+# 编译输出文件
+/build/
+/out/
+.gradle/
+eclipse/
+
+# IntelliJ IDEA / Android Studio 相关
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Eclipse 相关
+.metadata/
+.project
+.classpath
+
+# Gradle 相关
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar  # 保留 Gradle Wrapper
+!gradle/wrapper/gradle-wrapper.properties
+build/
+
+# 临时文件 & 日志
+*.log
+*.tmp
+*.lock
+*.bak
+*.swp
+.DS_Store
+Thumbs.db
+
+# 运行时或缓存文件
+*.class
+*.jar
+*.war
+*.ear
+*.tar.gz
+*.zip
+*.7z
+
+# Forge MDK / Minecraft 相关
+run/
+logs/
+crash-reports/
+
+# 许可证或 README 以外的文档
+CREDITS-fml.txt
+forge-*.txt
+LICENSE-fml.txt
+MinecraftForge-*.txt
+Paulscode*.txt
+README.txt
