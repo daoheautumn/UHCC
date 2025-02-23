@@ -15,7 +15,7 @@
 
 | 指令 | 描述 |
 |------|------|
-| `/uc` | 启用或禁用 Mod。 |
+| `/uc start` | 启用 Mod。 |
 | `/uc stop` | 停止 Mod 并清除统计数据。 |
 | `/uc setapi <API_KEY>` | 设置 Hypixel API Key。 |
 | `/uc c <player>` | 查询指定玩家的 UHC 统计数据。 |
