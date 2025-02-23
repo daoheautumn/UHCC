@@ -3,13 +3,16 @@ package com.daohe;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.GuiChat;
 import net.minecraft.client.network.NetworkPlayerInfo;
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.CommandException;
 import net.minecraft.command.ICommandSender;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.ChatComponentText;
 import net.minecraftforge.client.ClientCommandHandler;
+import net.minecraftforge.client.event.RenderLivingEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.fml.common.Mod;
@@ -38,7 +41,7 @@ import java.util.concurrent.ExecutorService;
 
 import net.minecraft.util.EnumChatFormatting;
 
-@Mod(modid = "uhccmod", name = "UHC Checker", version = "1.0")
+@Mod(modid = "uhccmod", name = "UHC Checker", version = "1.2.1")
 public class UHCCMod {
     private static String apiKey = "";
     private static final Minecraft mc = Minecraft.getMinecraft();
@@ -48,6 +51,7 @@ public class UHCCMod {
     private static boolean isStopped = false;
     private static boolean showTabStats = true;
     private static boolean showOverlayStats = true;
+    private static boolean showNametagStats = true;
     private static int overlayMaxPlayers = 50;
     private static final ExecutorService executor = Executors.newFixedThreadPool(5);
     private static final ConcurrentHashMap<String, PlayerStats> playerStatsMap = new ConcurrentHashMap<>();
@@ -58,6 +62,7 @@ public class UHCCMod {
     private static float overlayX = 0.0f;
     private static float overlayY = 0.0f;
     private static float overlayScale = 1.0f;
+    private static float nametagHeight = 0.7f;
     private static long lastUpdateTime = 0;
 
     @Mod.EventHandler
@@ -68,8 +73,10 @@ public class UHCCMod {
         overlayX = config.getFloat("overlayX", Configuration.CATEGORY_GENERAL, 0.0f, -1000.0f, 1000.0f, "X position of stats overlay");
         overlayY = config.getFloat("overlayY", Configuration.CATEGORY_GENERAL, 0.0f, -1000.0f, 1000.0f, "Y position of stats overlay");
         overlayScale = config.getFloat("overlayScale", Configuration.CATEGORY_GENERAL, 1.0f, 0.01f, 1.0f, "Scale of stats overlay");
+        nametagHeight = config.getFloat("nametagHeight", Configuration.CATEGORY_GENERAL, 0.7f, -10.0f, 10.0f, "Height offset of stats nametag");
         showTabStats = config.getBoolean("showTabStats", Configuration.CATEGORY_GENERAL, true, "Show stats in Tab list");
         showOverlayStats = config.getBoolean("showOverlayStats", Configuration.CATEGORY_GENERAL, true, "Show stats overlay in chat");
+        showNametagStats = config.getBoolean("showNametagStats", Configuration.CATEGORY_GENERAL, true, "Show stats above player nametags");
         overlayMaxPlayers = config.getInt("overlayMaxPlayers", Configuration.CATEGORY_GENERAL, 50, 1, 1000, "Max players per column in overlay");
     }
 
@@ -122,6 +129,65 @@ public class UHCCMod {
         }
     }
 
+    @SubscribeEvent
+    public void onRenderLiving(RenderLivingEvent.Specials.Pre event) {
+        if (!showNametagStats || isStopped || !isDetecting || !(event.entity instanceof EntityPlayer)) return;
+
+        EntityPlayer player = (EntityPlayer) event.entity;
+        String playerName = player.getName();
+        PlayerStats stats = playerStatsMap.get(playerName);
+
+        if (stats != null) {
+            FontRenderer fontRenderer = mc.fontRendererObj;
+            String statText;
+            if (stats.isQuerying) {
+                statText = EnumChatFormatting.GRAY + "[查询中]" + EnumChatFormatting.RESET;
+            } else if (stats.isNick) {
+                statText = EnumChatFormatting.DARK_PURPLE + "[nick]" + EnumChatFormatting.RESET; // 为 nick 玩家显示紫色 [nick]
+            } else if (stats.hasApiError) {
+                return; // API 错误时仍不显示任何内容
+            } else {
+                statText = EnumChatFormatting.LIGHT_PURPLE + "[" + stats.stars + "⭐]" + EnumChatFormatting.RESET + "  " +
+                        EnumChatFormatting.GOLD + "kdr:" + String.format("%.2f", stats.kdr) + "  " + stats.wins + "w" + EnumChatFormatting.RESET;
+            }
+            float scale = 0.02666667F;
+            double x = event.x;
+            double y = event.y + player.height + nametagHeight;
+            double z = event.z;
+
+            GL11.glPushMatrix();
+            GL11.glTranslatef((float) x, (float) y, (float) z);
+            GL11.glNormal3f(0.0F, 1.0F, 0.0F);
+            GL11.glRotatef(-mc.getRenderManager().playerViewY, 0.0F, 1.0F, 0.0F);
+            GL11.glRotatef(mc.getRenderManager().playerViewX, 1.0F, 0.0F, 0.0F);
+            GL11.glScalef(-scale, -scale, scale);
+            GL11.glDisable(GL11.GL_LIGHTING);
+            GL11.glDepthMask(false);
+            GL11.glDisable(GL11.GL_DEPTH_TEST);
+            GL11.glEnable(GL11.GL_BLEND);
+            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+
+            int width = fontRenderer.getStringWidth(statText.replaceAll("§[0-9a-fk-or]", "")) / 2;
+            GL11.glDisable(GL11.GL_TEXTURE_2D);
+            GL11.glColor4f(0.0F, 0.0F, 0.0F, 0.25F);
+            GL11.glBegin(GL11.GL_QUADS);
+            GL11.glVertex2f(-width - 1, -1);
+            GL11.glVertex2f(-width - 1, 8);
+            GL11.glVertex2f(width + 1, 8);
+            GL11.glVertex2f(width + 1, -1);
+            GL11.glEnd();
+            GL11.glEnable(GL11.GL_TEXTURE_2D);
+
+            fontRenderer.drawString(statText, -width, 0, 0xFFFFFF);
+
+            GL11.glEnable(GL11.GL_DEPTH_TEST);
+            GL11.glDepthMask(true);
+            GL11.glEnable(GL11.GL_LIGHTING);
+            GL11.glDisable(GL11.GL_BLEND);
+            GL11.glPopMatrix();
+        }
+    }
+
     private static void updatePlayerListFromTab() {
         if (mc.getNetHandler() == null || mc.getNetHandler().getPlayerInfoMap() == null) return;
 
@@ -157,8 +223,8 @@ public class UHCCMod {
             cachedSortedPlayers.sort(Comparator
                     .comparing(Map.Entry<String, PlayerStats>::getValue, Comparator
                             .comparing(PlayerStats::isNick).reversed()
-                            .thenComparing(PlayerStats::getStars, Comparator.reverseOrder())
-                            .thenComparing(PlayerStats::getKdr, Comparator.reverseOrder())));
+                            .thenComparing(PlayerStats::getKdr, Comparator.reverseOrder())
+                            .thenComparing(PlayerStats::getStars, Comparator.reverseOrder())));
             needsResort = false;
         }
 
@@ -183,9 +249,9 @@ public class UHCCMod {
                 EnumChatFormatting nameColor = getPlayerColor(playerName);
                 String namePrefix = playerName.equals(localPlayerName) ? EnumChatFormatting.BLUE + "" + EnumChatFormatting.BOLD : nameColor.toString();
                 String prefix = stats.hasApiError ? EnumChatFormatting.DARK_RED + "[API_ERR] " : stats.isNick ? EnumChatFormatting.DARK_PURPLE + "[nick] " : stats.isQuerying ? EnumChatFormatting.GRAY + "[查询中] " : "";
-
                 String display;
-                if (stats.isNick) {
+
+                if (stats.isNick || stats.isQuerying || stats.hasApiError) {
                     display = prefix + namePrefix + playerName + EnumChatFormatting.RESET;
                 } else {
                     String starsNumColor = stats.stars == 0 ? EnumChatFormatting.GRAY.toString() : EnumChatFormatting.YELLOW.toString();
@@ -215,7 +281,7 @@ public class UHCCMod {
                 String prefix = stats.hasApiError ? EnumChatFormatting.DARK_RED + "[API_ERR] " : stats.isNick ? EnumChatFormatting.DARK_PURPLE + "[nick] " : stats.isQuerying ? EnumChatFormatting.GRAY + "[查询中] " : "";
                 String displayName;
 
-                if (stats.isNick) {
+                if (stats.isNick || stats.isQuerying || stats.hasApiError) {
                     displayName = prefix + nameColor + playerName + EnumChatFormatting.RESET;
                 } else {
                     String starsNumColor = stats.stars == 0 ? EnumChatFormatting.GRAY.toString() : EnumChatFormatting.YELLOW.toString();
@@ -252,6 +318,10 @@ public class UHCCMod {
         playerStatsMap.clear();
         needsResort = true;
         cachedSortedPlayers.clear();
+        resetTabDisplay();
+    }
+
+    private static void resetTabDisplay() {
         if (mc.theWorld != null && mc.getNetHandler() != null) {
             for (NetworkPlayerInfo playerInfo : mc.getNetHandler().getPlayerInfoMap()) {
                 playerInfo.setDisplayName(null);
@@ -267,7 +337,7 @@ public class UHCCMod {
 
         @Override
         public String getCommandUsage(ICommandSender sender) {
-            return "/uc <stop|setapi|debug|help|c|size|xpos|ypos|resetpos|clear|toggle <tab/overlay>|overlaymaxid <number>>";
+            return "/uc <start|stop|setapi|debug|help|c|size|xpos|ypos|resetpos|clear|toggle <tab/overlay/nametag>|overlaymaxid <number>|nametagheight <number>>";
         }
 
         @Override
@@ -276,30 +346,30 @@ public class UHCCMod {
 
             try {
                 if (args.length == 0) {
+                    showHelpPanel(sender);
+                } else if (args.length == 1 && args[0].equalsIgnoreCase("start")) {
                     if (isStopped) {
                         isStopped = false;
                         isDetecting = true;
                         sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + "已重新启用 Mod 并开始检测 Tab 列表。"));
                         updatePlayerListFromTab();
-                    } else if (isDetecting) {
-                        isDetecting = false;
-                        clearStatsAndResetTab();
-                        sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + "已停止检测并清空列表，使用 /uc 重新启用。"));
-                    } else {
+                    } else if (!isDetecting) {
                         isDetecting = true;
                         sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + "已开始检测 Tab 列表以获取玩家统计数据。"));
                         updatePlayerListFromTab();
+                    } else {
+                        sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + "Mod 已处于检测状态，使用 /uc stop 停止。"));
                     }
                 } else if (args.length == 1 && args[0].equalsIgnoreCase("stop")) {
                     isStopped = true;
                     isDetecting = false;
                     clearStatsAndResetTab();
-                    sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + "已停止所有 Mod 动作并清空列表，使用 /uc 重新启用。"));
+                    sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + "已停止所有 Mod 动作并清空列表，使用 /uc start 重新启用。"));
                 } else if (args.length == 1 && args[0].equalsIgnoreCase("debug")) {
                     debugMode = !debugMode;
                     sender.addChatMessage(new ChatComponentText(EnumChatFormatting.GREEN + "调试模式已" + (debugMode ? "启用" : "禁用") + "！"));
                     if (debugMode) {
-                        sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + "使用 /uc 切换 Tab 列表检测。"));
+                        sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + "使用 /uc start 启用检测。"));
                     }
                 } else if (args.length == 1 && args[0].equalsIgnoreCase("help")) {
                     showHelpPanel(sender);
@@ -377,16 +447,18 @@ public class UHCCMod {
                 } else if (args.length == 2 && args[0].equalsIgnoreCase("toggle")) {
                     if (args[1].equalsIgnoreCase("tab")) {
                         showTabStats = !showTabStats;
-                        config.get(Configuration.CATEGORY_GENERAL, "showTabStats", true).set(showTabStats);
-                        config.save();
-                        sender.addChatMessage(new ChatComponentText(EnumChatFormatting.GREEN + "Tab 列表统计显示已" + (showTabStats ? "启用" : "禁用")));
+                        if (!showTabStats) {
+                            resetTabDisplay();
+                        }
+                        sender.addChatMessage(new ChatComponentText(EnumChatFormatting.GREEN + "Tab 统计显示已" + (showTabStats ? "开启" : "关闭")));
                     } else if (args[1].equalsIgnoreCase("overlay")) {
                         showOverlayStats = !showOverlayStats;
-                        config.get(Configuration.CATEGORY_GENERAL, "showOverlayStats", true).set(showOverlayStats);
-                        config.save();
-                        sender.addChatMessage(new ChatComponentText(EnumChatFormatting.GREEN + "聊天图层统计显示已" + (showOverlayStats ? "启用" : "禁用")));
+                        sender.addChatMessage(new ChatComponentText(EnumChatFormatting.GREEN + "覆盖层统计显示已" + (showOverlayStats ? "开启" : "关闭")));
+                    } else if (args[1].equalsIgnoreCase("nametag")) {
+                        showNametagStats = !showNametagStats;
+                        sender.addChatMessage(new ChatComponentText(EnumChatFormatting.GREEN + "头顶统计显示已" + (showNametagStats ? "开启" : "关闭")));
                     } else {
-                        sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + "用法: /uc toggle <tab/overlay>"));
+                        sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + "用法: /uc toggle <tab/overlay/nametag>"));
                     }
                 } else if (args.length == 2 && args[0].equalsIgnoreCase("overlaymaxid")) {
                     try {
@@ -402,6 +474,16 @@ public class UHCCMod {
                     } catch (NumberFormatException e) {
                         sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + "无效的数字: " + args[1]));
                     }
+                } else if (args.length == 2 && args[0].equalsIgnoreCase("nametagheight")) {
+                    try {
+                        float heightAdjust = Float.parseFloat(args[1]);
+                        nametagHeight += heightAdjust;
+                        config.get(Configuration.CATEGORY_GENERAL, "nametagHeight", 0.7f).set(nametagHeight);
+                        config.save();
+                        sender.addChatMessage(new ChatComponentText(EnumChatFormatting.GREEN + "头顶统计高度已调整至 " + nametagHeight));
+                    } catch (NumberFormatException e) {
+                        sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + "无效的高度值: " + args[1]));
+                    }
                 } else {
                     showHelpPanel(sender);
                 }
@@ -415,7 +497,7 @@ public class UHCCMod {
 
         private void showHelpPanel(ICommandSender sender) {
             sender.addChatMessage(new ChatComponentText(EnumChatFormatting.AQUA + "--- UHC Checker 帮助 ---"));
-            sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + "/uc - 切换 Mod 运行状态（启用/停止并清空列表）"));
+            sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + "/uc start - 开始检测 Tab 列表以获取玩家统计数据"));
             sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + "/uc stop - 停止所有 Mod 动作并清空列表"));
             sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + "/uc setapi <API_KEY> - 设置 Hypixel API Key"));
             sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + "/uc debug - 切换调试模式"));
@@ -426,8 +508,9 @@ public class UHCCMod {
             sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + "/uc ypos <number> - 调整覆盖层 Y 位置"));
             sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + "/uc resetpos - 重置覆盖层位置和大小"));
             sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + "/uc clear - 清除所有玩家统计数据"));
-            sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + "/uc toggle <tab/overlay> - 开关 Tab 或图层统计显示"));
+            sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + "/uc toggle <tab/overlay/nametag> - 切换 Tab/图层/头顶统计的渲染"));
             sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + "/uc overlaymaxid <number> - 设置图层每列最大玩家数"));
+            sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + "/uc nametagheight <number> - 调整头顶统计高度"));
             sender.addChatMessage(new ChatComponentText(EnumChatFormatting.AQUA + "------------------------"));
         }
 
