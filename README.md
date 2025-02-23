@@ -37,4 +37,4 @@ This project is licensed under the **MPL-2.0**.
 You are free to **modify and redistribute** as long as changes remain open-source.  
 
 ##  Credits  
-- Developed by **daoheautumn**.  
+- Developed by **daoheautumn**.   
