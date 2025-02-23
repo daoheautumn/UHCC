@@ -1,37 +1,37 @@
-# UHC Checker (UHCCMod)  
-A Minecraft 1.8.9 Forge Mod for checking Hypixel UHC stats.
+# UHCCMod
 
-[中文版](https://github.com/daoheautumn/uhcc/blob/main/README_ZH.md).  
+适用于 Minecraft 1.8.9 的 Forge Mod，用于查询 Hypixel UHC 统计数据。
 
-##  Features  
-- **Player Stats Display**: Show UHC stats (stars, KDR, wins) in **chat, Tab list, and overlay**.  
-- **Automatic Player Detection**: Parses chat messages and Tab list to track opponents.  
-- **Hypixel API Support**: Fetches real-time stats using the **Hypixel API**.  
-- **Customizable Overlay**: Move and resize the stats overlay.  
+## 功能
 
-##  Commands  
-| Command | Description |
-|---------|-------------|
-| `/uc` | Toggle the mod on/off. |
-| `/uc stop` | Stop the mod and clear stats. |
-| `/uc setapi <API_KEY>` | Set your Hypixel API key. |
-| `/uc c <player>` | Manually check a player’s UHC stats. |
-| `/uc toggle tab` | Toggle stats display in the Tab list. |
-| `/uc toggle overlay` | Toggle stats overlay in the chat. |
-| `/uc xpos <value>` | Move overlay horizontally. |
-| `/uc ypos <value>` | Move overlay vertically. |
-| `/uc size <value>` | Adjust overlay size (0.01 - 1.0). |
-| `/uc resetpos` | Reset overlay position. |
-| `/uc overlaymaxid <value>` | Set max players per column in overlay. |
+- **玩家统计显示**：在 **聊天、Tab 列表和 HUD Overlay** 中显示 UHC 统计数据（星级、KDR、胜场）。
+- **自动玩家检测**：解析聊天消息和 Tab 列表，自动追踪对手。
+- **Hypixel API 支持**：实时获取玩家数据。
+- **可定制覆盖层**：自由调整 **大小、位置、显示内容**。
 
-##  Installation  
-1. **Install Minecraft Forge 1.8.9**.  
-2. Download the latest release from [GitHub Releases](https://github.com/daoheautumn/uhcc/releases).  
-3. Put the `.jar` file in your **mods** folder (`.minecraft/mods`).  
-4. Launch Minecraft and set your API key using `/uc setapi <your_api_key>`.  
+## 指令
 
-##  Notes  
-- This mod requires a **Hypixel API key** ([Hypixel developer Dashboard](https://developer.hypixel.net/)).  
+| 指令 | 描述 |
+|------|------|
+| `/uc` | 启用或禁用 Mod。 |
+| `/uc stop` | 停止 Mod 并清除统计数据。 |
+| `/uc setapi <API_KEY>` | 设置 Hypixel API Key。 |
+| `/uc c <player>` | 查询指定玩家的 UHC 统计数据。 |
+| `/uc toggle tab` | 切换 **Tab 列表** 统计显示。 |
+| `/uc toggle overlay` | 切换 **HUD 覆盖层** 统计显示。 |
+| `/uc xpos <value>` | **调整覆盖层 X 轴位置**。 |
+| `/uc ypos <value>` | **调整覆盖层 Y 轴位置**。 |
+| `/uc size <value>` | **调整覆盖层大小**（0.01 - 1.0）。 |
+| `/uc resetpos` | **重置覆盖层位置**。 |
+| `/uc overlaymaxid <value>` | **设置覆盖层每列最大玩家数**。 |
 
-##  License  
-This project is licensed under the **MPL-2.0**.  
+## 安装
+
+1. 安装 **Minecraft Forge 1.8.9**。  
+2. 从 [GitHub Releases](https://github.com/daoheautumn/uhcc/releases) 下载 `.jar` 文件。  
+3. 将 `.jar` 放入 `.minecraft/mods/` 目录。  
+4. 启动游戏，输入 `/uc setapi <你的API Key>` 进行配置。  
+
+## 注意事项
+
+- **需要 Hypixel API Key**，[Hypixel developer Dashboard](https://developer.hypixel.net/)。  
