@@ -34,7 +34,7 @@
 
 ## 注意事项
 
-- **需要 Hypixel API Key**，使用 `/api new` 获取。  
+- **需要 Hypixel API Key**，[Hypixel developer Dashboard](https://developer.hypixel.net/)。  
 - **仅支持 Minecraft 1.8.9**。  
 
 ## 许可证
