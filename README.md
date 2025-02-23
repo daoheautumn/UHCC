@@ -24,7 +24,7 @@ A Minecraft 1.8.9 Forge Mod for checking Hypixel UHC stats.
 
 ## 📜 Installation  
 1. **Install Minecraft Forge 1.8.9**.  
-2. Download the latest release from [GitHub Releases](https://github.com/你的GitHub用户名/uhcc/releases).  
+2. Download the latest release from [GitHub Releases](https://github.com/daoheautumn/uhcc/releases).  
 3. Put the `.jar` file in your **mods** folder (`.minecraft/mods`).  
 4. Launch Minecraft and set your API key using `/uc setapi <your_api_key>`.  
 
