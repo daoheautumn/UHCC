@@ -2,7 +2,7 @@
 
 适用于 Minecraft 1.8.9 的 Forge Mod，用于查询 Hypixel UHC 统计数据。
 
-[English](https://github.com/daoheautumn/uhcc/blob/main/README_EN.md).  
+[English version](https://github.com/daoheautumn/uhcc/blob/main/README_EN.md)
 
 ## 功能
 
