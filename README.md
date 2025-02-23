@@ -30,7 +30,6 @@ A Minecraft 1.8.9 Forge Mod for checking Hypixel UHC stats.
 
 ##  Notes  
 - This mod requires a **Hypixel API key** (`/api new` in Hypixel chat).  
-- The overlay updates **every second** while active.  
 
 ##  License  
 This project is licensed under the **MPL-2.0**.  
