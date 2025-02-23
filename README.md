@@ -1,13 +1,13 @@
 # UHC Checker (UHCCMod)  
 A Minecraft 1.8.9 Forge Mod for checking Hypixel UHC stats.
 
-## 🌟 Features  
+##  Features  
 - **Player Stats Display**: Show UHC stats (stars, KDR, wins) in **chat, Tab list, and overlay**.  
 - **Automatic Player Detection**: Parses chat messages and Tab list to track opponents.  
 - **Hypixel API Support**: Fetches real-time stats using the **Hypixel API**.  
 - **Customizable Overlay**: Move and resize the stats overlay.  
 
-## 🔧 Commands  
+##  Commands  
 | Command | Description |
 |---------|-------------|
 | `/uc` | Toggle the mod on/off. |
@@ -22,21 +22,19 @@ A Minecraft 1.8.9 Forge Mod for checking Hypixel UHC stats.
 | `/uc resetpos` | Reset overlay position. |
 | `/uc overlaymaxid <value>` | Set max players per column in overlay. |
 
-## 📜 Installation  
+##  Installation  
 1. **Install Minecraft Forge 1.8.9**.  
 2. Download the latest release from [GitHub Releases](https://github.com/daoheautumn/uhcc/releases).  
 3. Put the `.jar` file in your **mods** folder (`.minecraft/mods`).  
 4. Launch Minecraft and set your API key using `/uc setapi <your_api_key>`.  
 
-## 📝 Notes  
+##  Notes  
 - This mod requires a **Hypixel API key** (`/api new` in Hypixel chat).  
 - The overlay updates **every second** while active.  
-- Players with `[nick]` might not return valid stats.  
 
-## ⚖️ License  
+##  License  
 This project is licensed under the **MPL-2.0**.  
 You are free to **modify and redistribute** as long as changes remain open-source.  
 
-## ❤️ Credits  
-- Inspired by **[MWE](https://github.com/Alexdoru/MWE)**.  
-- Developed by **你的GitHub用户名**.  
+##  Credits  
+- Developed by **daoheautumn**.  
