@@ -7,6 +7,13 @@ A Minecraft 1.8.9 Forge Mod for checking Hypixel UHC stats.
 - **Hypixel API Support**: Fetches real-time stats using the **Hypixel API**.  
 - **Customizable Overlay**: Move and resize the stats overlay.  
 
+##  Installation  
+1. **Install Minecraft Forge 1.8.9**.  
+2. Download the latest release from [**Releases**](https://github.com/daoheautumn/uhcc/releases).  
+3. Put the `.jar` file in your **mods** folder (`.minecraft/mods`).
+4. Get a **Hypixel API key** from ([**here**](https://developer.hypixel.net/)).  
+5. Launch Minecraft and set your API key using `/uc setapi <your_api_key>`.  
+ 
 ##  Commands  
 | Command | Description |
 |---------|-------------|
@@ -23,13 +30,6 @@ A Minecraft 1.8.9 Forge Mod for checking Hypixel UHC stats.
 | `/uc resetpos` | Reset overlay position. |
 | `/uc overlaymaxid <value>` | Set max players per column in overlay. |
 | `/uc nametagheight <value>` | Adjust Nametag stats height (default `0.7`, can be adjusted positively or negatively). |
-
-##  Installation  
-1. **Install Minecraft Forge 1.8.9**.  
-2. Download the latest release from [**Releases**](https://github.com/daoheautumn/uhcc/releases).  
-3. Put the `.jar` file in your **mods** folder (`.minecraft/mods`).
-4. Get a **Hypixel API key** from ([**here**](https://developer.hypixel.net/)).  
-5. Launch Minecraft and set your API key using `/uc setapi <your_api_key>`.  
 
 ##  License  
 This project is licensed under the **MPL-2.0**.  
