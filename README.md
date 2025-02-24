@@ -8,11 +8,12 @@
 - **可自定义 Overlay**：可以自由移动和调整 Overlay 的位置和大小。
 
 ## **安装方法**
-1. **安装 Minecraft Forge 1.8.9**。
+1. 安装 Minecraft Forge 1.8.9。
 2. 在 [**Releases**](https://github.com/daoheautumn/uhcc/releases) 下载最新版本。
 3. 将下载的 `.jar` 文件放入 **mods** 文件夹（路径：`.minecraft/mods`）。
 4. 获取 **Hypixel API Key**：[**点此申请**](https://developer.hypixel.net/)。
 5. 启动 Minecraft，并使用 `/uc setapi <你的 API Key>` 设置 API。
+6. 进入uhc队列后使用指令 `/uc start`
 
 ## **指令帮助**
 完整的指令列表请参考：[**指令帮助**](https://github.com/daoheautumn/UHCC/blob/main/CMD_help.md)。
