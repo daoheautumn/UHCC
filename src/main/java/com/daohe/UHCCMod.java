@@ -1,5 +1,6 @@
 package com.daohe;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.minecraft.client.Minecraft;
@@ -29,6 +30,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -41,7 +43,7 @@ import java.util.concurrent.ExecutorService;
 
 import net.minecraft.util.EnumChatFormatting;
 
-@Mod(modid = "uhccmod", name = "UHC Checker", version = "1.2.1")
+@Mod(modid = "uhccmod", name = "UHC Checker", version = "1.0")
 public class UHCCMod {
     private static String apiKey = "";
     private static final Minecraft mc = Minecraft.getMinecraft();
@@ -54,9 +56,9 @@ public class UHCCMod {
     private static boolean showNametagStats = true;
     private static int overlayMaxPlayers = 50;
     private static final ExecutorService executor = Executors.newFixedThreadPool(5);
-    private static final ConcurrentHashMap<String, PlayerStats> playerStatsMap = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, com.daohe.UHCCMod.PlayerStats> playerStatsMap = new ConcurrentHashMap<>();
     private static final Random random = new Random();
-    private static List<Map.Entry<String, PlayerStats>> cachedSortedPlayers = new ArrayList<>();
+    private static List<Map.Entry<String, com.daohe.UHCCMod.PlayerStats>> cachedSortedPlayers = new ArrayList<>();
     private static boolean needsResort = true;
 
     private static float overlayX = 0.0f;
@@ -64,6 +66,24 @@ public class UHCCMod {
     private static float overlayScale = 1.0f;
     private static float nametagHeight = 0.7f;
     private static long lastUpdateTime = 0;
+
+    // 定义需要查找的神器列表及其翻译
+    private static final List<String> ARTIFACTS_TO_CHECK = Arrays.asList(
+            "artemis_bow", "flask_of_ichor", "exodus", "hide_of_leviathan", "tablets_of_destiny",
+            "axe_of_perun", "excalibur", "anduril", "deaths_scythe", "chest_of_fate",
+            "cornucopia", "essence_of_yggdrasil", "voidbox", "deus_ex_machina", "dice_of_god",
+            "kings_rod", "daredevil", "flask_of_cleansing", "shoes_of_vidar", "potion_of_vitality",
+            "miners_blessing", "ambrosia", "bloodlust", "modular_bow", "expert_seal",
+            "hermes_boots", "barbarian_chestplate"
+    );
+    private static final List<String> ARTIFACT_TRANSLATIONS = Arrays.asList(
+            "自瞄弓", "瞬三药", "永生帽", "潮汐裤", "命运之书",
+            "雷斧", "王剑", "安德鲁", "镰刀", "命运之箱",
+            "丰饶之角", "世界树精华", "虚空箱", "无敌药", "上帝之骰",
+            "王竿", "骷髅马", "肃清", "水鞋", "活力药",
+            "矿神的祝福", "密酒", "杀人剑", "变幻弓", "大师卷轴",
+            "小飞鞋", "力量甲"
+    );
 
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event) {
@@ -82,7 +102,7 @@ public class UHCCMod {
 
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
-        ClientCommandHandler.instance.registerCommand(new UCCommand());
+        ClientCommandHandler.instance.registerCommand(new com.daohe.UHCCMod.UCCommand());
         MinecraftForge.EVENT_BUS.register(this);
     }
 
@@ -112,7 +132,7 @@ public class UHCCMod {
             if (debugMode) {
                 System.out.println("[UHCCMod] Player joined: " + playerName);
             }
-            playerStatsMap.put(playerName, new PlayerStats(false, true));
+            playerStatsMap.put(playerName, new com.daohe.UHCCMod.PlayerStats(false, true));
             executor.submit(() -> getPlayerStats(playerName));
         }
     }
@@ -135,7 +155,7 @@ public class UHCCMod {
 
         EntityPlayer player = (EntityPlayer) event.entity;
         String playerName = player.getName();
-        PlayerStats stats = playerStatsMap.get(playerName);
+        com.daohe.UHCCMod.PlayerStats stats = playerStatsMap.get(playerName);
 
         if (stats != null) {
             FontRenderer fontRenderer = mc.fontRendererObj;
@@ -143,11 +163,11 @@ public class UHCCMod {
             if (stats.isQuerying) {
                 statText = EnumChatFormatting.GRAY + "[查询中]" + EnumChatFormatting.RESET;
             } else if (stats.isNick) {
-                statText = EnumChatFormatting.DARK_PURPLE + "[nick]" + EnumChatFormatting.RESET; // 为 nick 玩家显示紫色 [nick]
+                statText = EnumChatFormatting.DARK_PURPLE + "[nick]" + EnumChatFormatting.RESET;
             } else if (stats.hasApiError) {
-                return; // API 错误时仍不显示任何内容
+                return;
             } else {
-                statText = EnumChatFormatting.LIGHT_PURPLE + "[" + stats.stars + "⭐]" + EnumChatFormatting.RESET + "  " +
+                statText = EnumChatFormatting.LIGHT_PURPLE + "[" + stats.stars + "✰]" + EnumChatFormatting.RESET + "  " +
                         EnumChatFormatting.GOLD + "kdr:" + String.format("%.2f", stats.kdr) + "  " + stats.wins + "w" + EnumChatFormatting.RESET;
             }
             float scale = 0.02666667F;
@@ -199,7 +219,7 @@ public class UHCCMod {
                 if (debugMode) {
                     System.out.println("[UHCCMod] Detected new player from Tab: " + playerName);
                 }
-                playerStatsMap.put(playerName, new PlayerStats(false, true));
+                playerStatsMap.put(playerName, new com.daohe.UHCCMod.PlayerStats(false, true));
                 executor.submit(() -> getPlayerStats(playerName));
             }
         }
@@ -221,10 +241,10 @@ public class UHCCMod {
         if (needsResort) {
             cachedSortedPlayers = new ArrayList<>(playerStatsMap.entrySet());
             cachedSortedPlayers.sort(Comparator
-                    .comparing(Map.Entry<String, PlayerStats>::getValue, Comparator
-                            .comparing(PlayerStats::isNick).reversed()
-                            .thenComparing(PlayerStats::getKdr, Comparator.reverseOrder())
-                            .thenComparing(PlayerStats::getStars, Comparator.reverseOrder())));
+                    .comparing(Map.Entry<String, com.daohe.UHCCMod.PlayerStats>::getValue, Comparator
+                            .comparing(com.daohe.UHCCMod.PlayerStats::isNick).reversed()
+                            .thenComparing(com.daohe.UHCCMod.PlayerStats::getKdr, Comparator.reverseOrder())
+                            .thenComparing(com.daohe.UHCCMod.PlayerStats::getStars, Comparator.reverseOrder())));
             needsResort = false;
         }
 
@@ -243,9 +263,9 @@ public class UHCCMod {
             int endIdx = Math.min(startIdx + overlayMaxPlayers, totalPlayers);
 
             for (int i = startIdx; i < endIdx; i++) {
-                Map.Entry<String, PlayerStats> entry = cachedSortedPlayers.get(i);
+                Map.Entry<String, com.daohe.UHCCMod.PlayerStats> entry = cachedSortedPlayers.get(i);
                 String playerName = entry.getKey();
-                PlayerStats stats = entry.getValue();
+                com.daohe.UHCCMod.PlayerStats stats = entry.getValue();
                 EnumChatFormatting nameColor = getPlayerColor(playerName);
                 String namePrefix = playerName.equals(localPlayerName) ? EnumChatFormatting.BLUE + "" + EnumChatFormatting.BOLD : nameColor.toString();
                 String prefix = stats.hasApiError ? EnumChatFormatting.DARK_RED + "[API_ERR] " : stats.isNick ? EnumChatFormatting.DARK_PURPLE + "[nick] " : stats.isQuerying ? EnumChatFormatting.GRAY + "[查询中] " : "";
@@ -275,7 +295,7 @@ public class UHCCMod {
 
         for (NetworkPlayerInfo playerInfo : mc.getNetHandler().getPlayerInfoMap()) {
             String playerName = playerInfo.getGameProfile().getName();
-            PlayerStats stats = playerStatsMap.get(playerName);
+            com.daohe.UHCCMod.PlayerStats stats = playerStatsMap.get(playerName);
             if (stats != null) {
                 EnumChatFormatting nameColor = getPlayerColor(playerName);
                 String prefix = stats.hasApiError ? EnumChatFormatting.DARK_RED + "[API_ERR] " : stats.isNick ? EnumChatFormatting.DARK_PURPLE + "[nick] " : stats.isQuerying ? EnumChatFormatting.GRAY + "[查询中] " : "";
@@ -385,15 +405,18 @@ public class UHCCMod {
                     String targetPlayer = args[1];
                     sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + "正在查询 " + targetPlayer + " 的 UHC 统计数据..."));
                     executor.submit(() -> {
-                        PlayerStats stats = getPlayerStats(targetPlayer);
+                        com.daohe.UHCCMod.PlayerStats stats = getPlayerStats(targetPlayer);
                         if (stats != null) {
                             if (stats.isNick) {
                                 mc.thePlayer.addChatMessage(new ChatComponentText(EnumChatFormatting.DARK_PURPLE + "[nick] " + targetPlayer));
                             } else {
-                                mc.thePlayer.addChatMessage(new ChatComponentText(EnumChatFormatting.AQUA + targetPlayer + " - " + EnumChatFormatting.YELLOW + stats.stars + "★"));
+                                mc.thePlayer.addChatMessage(new ChatComponentText(EnumChatFormatting.AQUA + targetPlayer + " - " + EnumChatFormatting.YELLOW + stats.stars + "✰"));
                                 mc.thePlayer.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + "击杀: " + stats.kills + " | 死亡: " + stats.deaths + " | KDR: " + EnumChatFormatting.RED + String.format("%.2f", stats.kdr)));
                                 mc.thePlayer.addChatMessage(new ChatComponentText(EnumChatFormatting.GREEN + "胜利: " + stats.wins + " | 分数: " + stats.score));
                                 mc.thePlayer.addChatMessage(new ChatComponentText(EnumChatFormatting.LIGHT_PURPLE + "装备套件: " + stats.equippedKit));
+                                if (!stats.artifacts.isEmpty()) {
+                                    mc.thePlayer.addChatMessage(new ChatComponentText(EnumChatFormatting.LIGHT_PURPLE + "额外神器: " + String.join("，", stats.artifacts)));
+                                }
                             }
                         }
                     });
@@ -525,7 +548,7 @@ public class UHCCMod {
         }
     }
 
-    private static PlayerStats getPlayerStats(String playerName) {
+    private static com.daohe.UHCCMod.PlayerStats getPlayerStats(String playerName) {
         if (isStopped || mc.thePlayer == null || mc.theWorld == null) {
             System.out.println("[UHCCMod] Error: Mod stopped or mc.thePlayer/mc.theWorld is null for " + playerName);
             return null;
@@ -565,7 +588,7 @@ public class UHCCMod {
                             if (debugMode) {
                                 System.out.println("[UHCCMod] Mojang API: " + errorMessage + " for " + playerName + ", marking as [nick]");
                             }
-                            PlayerStats nickStats = new PlayerStats(true);
+                            com.daohe.UHCCMod.PlayerStats nickStats = new com.daohe.UHCCMod.PlayerStats(true);
                             playerStatsMap.put(playerName, nickStats);
                             needsResort = true;
                             return nickStats;
@@ -579,7 +602,7 @@ public class UHCCMod {
                 if (debugMode) {
                     System.out.println("[UHCCMod] Failed to get UUID for " + playerName + " after 6 retries, assuming [nick]");
                 }
-                PlayerStats nickStats = new PlayerStats(true);
+                com.daohe.UHCCMod.PlayerStats nickStats = new com.daohe.UHCCMod.PlayerStats(true);
                 nickStats.hasApiError = mojangError;
                 playerStatsMap.put(playerName, nickStats);
                 needsResort = true;
@@ -628,7 +651,7 @@ public class UHCCMod {
                     System.out.println("[UHCCMod] Failed to get Hypixel data for " + playerName + " after 6 retries");
                 }
                 mc.thePlayer.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + "无法获取 " + playerName + " 的 Hypixel 数据，已尝试 6 次"));
-                PlayerStats errorStats = new PlayerStats(false);
+                com.daohe.UHCCMod.PlayerStats errorStats = new com.daohe.UHCCMod.PlayerStats(false);
                 errorStats.hasApiError = true;
                 playerStatsMap.put(playerName, errorStats);
                 needsResort = true;
@@ -639,7 +662,7 @@ public class UHCCMod {
                 if (debugMode) {
                     System.out.println("[UHCCMod] Hypixel API: Player null for " + playerName + ", marking as [nick]");
                 }
-                PlayerStats nickStats = new PlayerStats(true);
+                com.daohe.UHCCMod.PlayerStats nickStats = new com.daohe.UHCCMod.PlayerStats(true);
                 playerStatsMap.put(playerName, nickStats);
                 needsResort = true;
                 return nickStats;
@@ -650,7 +673,7 @@ public class UHCCMod {
                 if (debugMode) {
                     System.out.println("[UHCCMod] No player data in Hypixel response");
                 }
-                PlayerStats nickStats = new PlayerStats(true);
+                com.daohe.UHCCMod.PlayerStats nickStats = new com.daohe.UHCCMod.PlayerStats(true);
                 playerStatsMap.put(playerName, nickStats);
                 needsResort = true;
                 return nickStats;
@@ -660,7 +683,7 @@ public class UHCCMod {
                 if (debugMode) {
                     System.out.println("[UHCCMod] No UHC stats found for " + playerName);
                 }
-                PlayerStats statsData = new PlayerStats(0, 0, 0, 0.0, 0, 0, "None");
+                com.daohe.UHCCMod.PlayerStats statsData = new com.daohe.UHCCMod.PlayerStats(0, 0, 0, 0.0, 0, 0, "None", new ArrayList<>());
                 playerStatsMap.put(playerName, statsData);
                 needsResort = true;
                 return statsData;
@@ -685,10 +708,26 @@ public class UHCCMod {
             int totalWins = wins + winsSolo;
             int stars = calculateUHCStars(score);
 
+            // 查找神器
+            List<String> artifacts = new ArrayList<>();
+            if (uhcStats.has("packages") && uhcStats.get("packages").isJsonArray()) {
+                JsonArray packages = uhcStats.getAsJsonArray("packages");
+                for (int i = 0; i < packages.size(); i++) {
+                    String packageName = packages.get(i).getAsString();
+                    int index = ARTIFACTS_TO_CHECK.indexOf(packageName);
+                    if (index != -1) {
+                        artifacts.add(ARTIFACT_TRANSLATIONS.get(index));
+                    }
+                }
+            }
+
             if (debugMode) {
                 System.out.println("[UHCCMod] Stats calculated for " + playerName);
+                if (!artifacts.isEmpty()) {
+                    System.out.println("[UHCCMod] Found artifacts: " + String.join(", ", artifacts));
+                }
             }
-            PlayerStats statsData = new PlayerStats(stars, totalKills, totalDeaths, kdr, totalWins, score, equippedKit);
+            com.daohe.UHCCMod.PlayerStats statsData = new com.daohe.UHCCMod.PlayerStats(stars, totalKills, totalDeaths, kdr, totalWins, score, equippedKit, artifacts);
             playerStatsMap.put(playerName, statsData);
             needsResort = true;
             return statsData;
@@ -696,7 +735,7 @@ public class UHCCMod {
             if (debugMode) {
                 System.out.println("[UHCCMod] Error occurred: " + e.toString());
             }
-            PlayerStats nickStats = new PlayerStats(true);
+            com.daohe.UHCCMod.PlayerStats nickStats = new com.daohe.UHCCMod.PlayerStats(true);
             playerStatsMap.put(playerName, nickStats);
             needsResort = true;
             return nickStats;
@@ -768,8 +807,9 @@ public class UHCCMod {
         boolean isNick;
         boolean isQuerying;
         boolean hasApiError;
+        List<String> artifacts;
 
-        PlayerStats(int stars, int kills, int deaths, double kdr, int wins, int score, String equippedKit) {
+        PlayerStats(int stars, int kills, int deaths, double kdr, int wins, int score, String equippedKit, List<String> artifacts) {
             this.stars = stars;
             this.kills = kills;
             this.deaths = deaths;
@@ -780,6 +820,7 @@ public class UHCCMod {
             this.isNick = false;
             this.isQuerying = false;
             this.hasApiError = false;
+            this.artifacts = artifacts;
         }
 
         PlayerStats(boolean isNick) {
@@ -793,6 +834,7 @@ public class UHCCMod {
             this.score = 0;
             this.equippedKit = "None";
             this.hasApiError = false;
+            this.artifacts = new ArrayList<>();
         }
 
         PlayerStats(boolean isNick, boolean isQuerying) {
@@ -806,6 +848,7 @@ public class UHCCMod {
             this.score = 0;
             this.equippedKit = "None";
             this.hasApiError = false;
+            this.artifacts = new ArrayList<>();
         }
 
         public int getStars() {
