@@ -50,7 +50,7 @@ import java.util.concurrent.Future;
 
 import net.minecraft.util.EnumChatFormatting;
 
-@Mod(modid = "uhccmod", name = "UHC Checker", version = "1.0", clientSideOnly = true)
+@Mod(modid = "uhccmod", name = "UHC Checker", version = "1.2.4", clientSideOnly = true)
 public class UHCCMod {
     public static String apiKey = "";
     private static final Minecraft mc = Minecraft.getMinecraft();
