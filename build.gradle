@@ -30,7 +30,7 @@ tasks.withType(JavaCompile) {
 }
 
 dependencies {
-    compile 'com.google.code.gson:gson:2.2.4' // Use a version compatible with Minecraft 1.8.9
+    compile 'com.google.code.gson:gson:2.2.4'
 }
 
 processResources {
