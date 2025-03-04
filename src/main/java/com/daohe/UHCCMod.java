@@ -122,7 +122,7 @@ public class UHCCMod {
         overlayMaxPlayers = config.getInt("overlayMaxPlayers", Configuration.CATEGORY_GENERAL, 25, 1, 1000, "覆盖层每列最大玩家数");
         config.save();
 
-        overlayKey = new KeyBinding("key.overlay", Keyboard.KEY_GRAVE, "key.categories.uhcchecker");
+        overlayKey = new KeyBinding("打开Overlay", Keyboard.KEY_GRAVE, "UHCC"); // 懒得写语言文件._.
         ClientRegistry.registerKeyBinding(overlayKey);
     }
 
