@@ -50,20 +50,20 @@ import java.util.concurrent.Future;
 
 import net.minecraft.util.EnumChatFormatting;
 
-@Mod(modid = "uhccmod", name = "UHC Checker", version = "1.2.4", clientSideOnly = true)
+@Mod(modid = "uhccmod", name = "UHC Checker", version = "1.2.5", clientSideOnly = true)
 public class UHCCMod {
     public static String apiKey = "";
     private static final Minecraft mc = Minecraft.getMinecraft();
     private static Configuration config;
-    private static boolean debugMode = false;
-    private static boolean isDetecting = false;
+    public static boolean debugMode = false;
+    public static boolean isDetecting = false;
     private static boolean isStopped = false;
     private static boolean showTabStats;
     private static boolean showOverlayStats;
     private static boolean showNametagStats;
     private static int overlayMaxPlayers = 25;
-    private static final ExecutorService executor = Executors.newFixedThreadPool(5);
-    private static final ConcurrentHashMap<String, PlayerStats> playerStatsMap = new ConcurrentHashMap<>();
+    private static ExecutorService executor = Executors.newFixedThreadPool(5);
+    public static final ConcurrentHashMap<String, PlayerStats> playerStatsMap = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, Future<?>> playerQueryTasks = new ConcurrentHashMap<>();
     private static final Random random = new Random();
     private static List<Map.Entry<String, PlayerStats>> cachedSortedPlayers = new ArrayList<>();
@@ -80,6 +80,7 @@ public class UHCCMod {
     private static final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
 
     private static KeyBinding overlayKey;
+    private static KillCount killCount;
 
     private static final List<String> ARTIFACTS_TO_CHECK = Arrays.asList(
             "artemis_bow", "flask_of_ichor", "exodus", "hide_of_leviathan", "tablets_of_destiny",
@@ -129,11 +130,17 @@ public class UHCCMod {
     public void init(FMLInitializationEvent event) {
         ClientCommandHandler.instance.registerCommand(new UCCommand());
         MinecraftForge.EVENT_BUS.register(this);
+        killCount = new KillCount(this);
     }
 
     @Mod.EventHandler
     public void onServerStopping(FMLServerStoppingEvent event) {
-        executor.shutdownNow();
+        if (executor != null) {
+            executor.shutdownNow();
+            if (debugMode) {
+                System.out.println("Executor shutdown on server stopping");
+            }
+        }
     }
 
     @SubscribeEvent
@@ -194,17 +201,21 @@ public class UHCCMod {
 
         if (stats != null) {
             FontRenderer fontRenderer = mc.fontRendererObj;
-            String statText;
+            StringBuilder statText = new StringBuilder();
             if (stats.isQuerying) {
-                statText = EnumChatFormatting.GRAY + "[查询中]" + EnumChatFormatting.RESET;
+                statText.append(EnumChatFormatting.GRAY).append("[查询中]").append(EnumChatFormatting.RESET);
             } else if (stats.isNick) {
-                statText = EnumChatFormatting.DARK_PURPLE + "[nick]" + EnumChatFormatting.RESET;
+                statText.append(EnumChatFormatting.DARK_PURPLE).append("[nick]").append(EnumChatFormatting.RESET);
+                KillCount.appendKillCount(statText, stats);
             } else if (stats.hasApiError) {
                 return;
             } else {
-                statText = EnumChatFormatting.LIGHT_PURPLE + "[" + stats.stars + "✰]" + EnumChatFormatting.RESET + "  " +
-                        EnumChatFormatting.GOLD + "kdr:" + String.format("%.2f", stats.kdr) + "  " + stats.wins + "w" + EnumChatFormatting.RESET;
+                statText.append(EnumChatFormatting.LIGHT_PURPLE).append("[").append(stats.stars).append("✰]").append(EnumChatFormatting.RESET)
+                        .append("  ").append(EnumChatFormatting.GOLD).append("kdr:").append(String.format("%.2f", stats.kdr))
+                        .append("  ").append(stats.wins).append("w").append("  ");
+                KillCount.appendKillCount(statText, stats);
             }
+
             float scale = 0.02666667F;
             double x = event.x;
             double y = event.y + player.height + nametagHeight;
@@ -222,7 +233,7 @@ public class UHCCMod {
             GL11.glEnable(GL11.GL_BLEND);
             GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
 
-            int width = fontRenderer.getStringWidth(statText.replaceAll("§[0-9a-fk-or]", "")) / 2;
+            int width = fontRenderer.getStringWidth(statText.toString().replaceAll("§[0-9a-fk-or]", "")) / 2;
             GL11.glDisable(GL11.GL_TEXTURE_2D);
             GL11.glColor4f(0.0F, 0.0F, 0.0F, 0.25F);
             GL11.glBegin(GL11.GL_QUADS);
@@ -233,7 +244,7 @@ public class UHCCMod {
             GL11.glEnd();
             GL11.glEnable(GL11.GL_TEXTURE_2D);
 
-            fontRenderer.drawString(statText, -width, 0, 0xFFFFFF);
+            fontRenderer.drawString(statText.toString(), -width, 0, 0xFFFFFF);
 
             GL11.glEnable(GL11.GL_DEPTH_TEST);
             GL11.glDepthMask(true);
@@ -274,8 +285,20 @@ public class UHCCMod {
     }
 
     private static void submitPlayerQuery(String playerName) {
-        Future<?> task = executor.submit(() -> getPlayerStats(playerName));
-        playerQueryTasks.put(playerName, task);
+        if (executor == null || executor.isShutdown() || executor.isTerminated()) {
+            restartExecutor();
+        }
+        try {
+            Future<?> task = executor.submit(() -> getPlayerStats(playerName));
+            playerQueryTasks.put(playerName, task);
+            if (debugMode) {
+                System.out.println("Submitted query task for " + playerName);
+            }
+        } catch (Exception e) {
+            if (debugMode) {
+                System.out.println("Failed to submit query for " + playerName + ": " + e.getMessage());
+            }
+        }
     }
 
     private static void cancelPlayerQuery(String playerName) {
@@ -295,6 +318,16 @@ public class UHCCMod {
         playerQueryTasks.clear();
         if (debugMode) {
             System.out.println("All queries stopped");
+        }
+    }
+
+    private static void restartExecutor() {
+        if (executor != null && !executor.isShutdown()) {
+            executor.shutdownNow();
+        }
+        executor = Executors.newFixedThreadPool(5);
+        if (debugMode) {
+            System.out.println("Executor restarted");
         }
     }
 
@@ -334,19 +367,21 @@ public class UHCCMod {
                 EnumChatFormatting nameColor = getPlayerColor(playerName);
                 String namePrefix = playerName.equals(localPlayerName) ? EnumChatFormatting.BLUE + "" + EnumChatFormatting.BOLD : nameColor.toString();
                 String prefix = stats.hasApiError ? EnumChatFormatting.DARK_RED + "[API_ERR] " : stats.isNick ? EnumChatFormatting.DARK_PURPLE + "[nick] " : stats.isQuerying ? EnumChatFormatting.GRAY + "[查询中] " : "";
-                String display;
+                StringBuilder display = new StringBuilder();
 
                 if (stats.isNick || stats.isQuerying || stats.hasApiError) {
-                    display = prefix + namePrefix + playerName + EnumChatFormatting.RESET;
+                    display.append(prefix).append(namePrefix).append(playerName).append(EnumChatFormatting.RESET);
+                    KillCount.appendKillCount(display, stats);
                 } else {
                     String starsNumColor = stats.stars == 0 ? EnumChatFormatting.GRAY.toString() : EnumChatFormatting.YELLOW.toString();
                     String kdrNumColor = stats.kdr == 0.0 ? EnumChatFormatting.GRAY.toString() : EnumChatFormatting.RED.toString();
                     String winsNumColor = stats.wins == 0 ? EnumChatFormatting.GRAY.toString() : EnumChatFormatting.GOLD.toString();
 
-                    display = String.format("%s%-16s" + EnumChatFormatting.RESET + " | " + EnumChatFormatting.YELLOW + "%s%2d" + EnumChatFormatting.YELLOW + "✰" + EnumChatFormatting.RESET + " | " + EnumChatFormatting.RED + "KDR:" + "%s%-6.2f" + EnumChatFormatting.RESET + " | " + EnumChatFormatting.GOLD + "W:" + "%s%-3d" + EnumChatFormatting.RESET,
-                            prefix + namePrefix, playerName, starsNumColor, stats.stars, kdrNumColor, stats.kdr, winsNumColor, stats.wins);
+                    display.append(String.format("%s%-16s" + EnumChatFormatting.RESET + " | " + EnumChatFormatting.YELLOW + "%s%2d" + EnumChatFormatting.YELLOW + "✰" + EnumChatFormatting.RESET + " | " + EnumChatFormatting.RED + "KDR:" + "%s%-6.2f" + EnumChatFormatting.RESET + " | " + EnumChatFormatting.GOLD + "W:" + "%s%-3d" + EnumChatFormatting.RESET + " |",
+                            prefix + namePrefix, playerName, starsNumColor, stats.stars, kdrNumColor, stats.kdr, winsNumColor, stats.wins));
+                    KillCount.appendKillCount(display, stats);
                 }
-                mc.fontRendererObj.drawStringWithShadow(display, col * columnWidth, y, 0xFFFFFF);
+                mc.fontRendererObj.drawStringWithShadow(display.toString(), col * columnWidth, y, 0xFFFFFF);
                 y += rowHeight;
             }
             y = rowHeight + 5;
@@ -359,28 +394,51 @@ public class UHCCMod {
         if (mc.thePlayer == null || mc.theWorld == null || mc.getNetHandler() == null || apiKey.isEmpty()) return;
 
         for (NetworkPlayerInfo playerInfo : mc.getNetHandler().getPlayerInfoMap()) {
+            if (playerInfo == null) continue;
             String playerName = playerInfo.getGameProfile().getName();
             PlayerStats stats = playerStatsMap.get(playerName);
             if (stats != null) {
-                EnumChatFormatting nameColor = getPlayerColor(playerName);
+                EnumChatFormatting nameColor;
+                try {
+                    nameColor = getPlayerColor(playerName);
+                } catch (NullPointerException e) {
+                    if (debugMode) {
+                        System.out.println("Failed to get player color for " + playerName + ": " + e.getMessage());
+                    }
+                    nameColor = EnumChatFormatting.WHITE;
+                }
                 String prefix = stats.hasApiError ? EnumChatFormatting.DARK_RED + "[API_ERR] " : stats.isNick ? EnumChatFormatting.DARK_PURPLE + "[nick] " : stats.isQuerying ? EnumChatFormatting.GRAY + "[查询中] " : "";
-                String displayName;
+                StringBuilder displayName = new StringBuilder();
 
                 if (stats.isNick || stats.isQuerying || stats.hasApiError) {
-                    displayName = prefix + nameColor + playerName + EnumChatFormatting.RESET;
+                    displayName.append(prefix).append(nameColor).append(playerName).append(EnumChatFormatting.RESET);
+                    KillCount.appendKillCount(displayName, stats);
                 } else {
                     String starsNumColor = stats.stars == 0 ? EnumChatFormatting.GRAY.toString() : EnumChatFormatting.YELLOW.toString();
                     String kdrNumColor = stats.kdr == 0.0 ? EnumChatFormatting.GRAY.toString() : EnumChatFormatting.RED.toString();
                     String winsNumColor = stats.wins == 0 ? EnumChatFormatting.GRAY.toString() : EnumChatFormatting.GOLD.toString();
 
-                    displayName = prefix + nameColor + playerName + EnumChatFormatting.RESET + " - " +
-                            EnumChatFormatting.YELLOW + starsNumColor + stats.stars + EnumChatFormatting.YELLOW + "✰" + EnumChatFormatting.RESET + " " +
-                            EnumChatFormatting.RED + "KDR:" + kdrNumColor + String.format("%.2f", stats.kdr) + EnumChatFormatting.RESET + " " +
-                            EnumChatFormatting.GOLD + "W:" + winsNumColor + stats.wins + EnumChatFormatting.RESET;
+                    displayName.append(prefix).append(nameColor).append(playerName).append(EnumChatFormatting.RESET).append(" - ")
+                            .append(EnumChatFormatting.YELLOW).append(starsNumColor).append(stats.stars).append(EnumChatFormatting.YELLOW).append("✰").append(EnumChatFormatting.RESET).append(" ")
+                            .append(EnumChatFormatting.RED).append("KDR:").append(kdrNumColor).append(String.format("%.2f", stats.kdr)).append(EnumChatFormatting.RESET).append(" ")
+                            .append(EnumChatFormatting.GOLD).append("W:").append(winsNumColor).append(stats.wins).append(EnumChatFormatting.RESET);
+                    KillCount.appendKillCount(displayName, stats);
                 }
-                playerInfo.setDisplayName(new ChatComponentText(displayName));
+                try {
+                    playerInfo.setDisplayName(new ChatComponentText(displayName.toString()));
+                } catch (NullPointerException e) {
+                    if (debugMode) {
+                        System.out.println("Failed to set display name for " + playerName + ": " + e.getMessage());
+                    }
+                }
             } else {
-                playerInfo.setDisplayName(null);
+                try {
+                    playerInfo.setDisplayName(null);
+                } catch (NullPointerException e) {
+                    if (debugMode) {
+                        System.out.println("Failed to reset display name for " + playerName + ": " + e.getMessage());
+                    }
+                }
             }
         }
     }
@@ -388,12 +446,16 @@ public class UHCCMod {
     private EnumChatFormatting getPlayerColor(String playerName) {
         if (mc.theWorld == null || mc.getNetHandler() == null) return EnumChatFormatting.WHITE;
         NetworkPlayerInfo playerInfo = mc.getNetHandler().getPlayerInfo(playerName);
-        if (playerInfo != null && playerInfo.getPlayerTeam() != null) {
-            String prefix = playerInfo.getPlayerTeam().getColorPrefix();
-            for (EnumChatFormatting color : EnumChatFormatting.values()) {
-                if (color.toString().equals(prefix) && color.isColor()) {
-                    return color;
-                }
+        if (playerInfo == null || playerInfo.getPlayerTeam() == null) {
+            return EnumChatFormatting.WHITE;
+        }
+        String prefix = playerInfo.getPlayerTeam().getColorPrefix();
+        if (prefix == null) {
+            return EnumChatFormatting.WHITE;
+        }
+        for (EnumChatFormatting color : EnumChatFormatting.values()) {
+            if (color.toString().equals(prefix) && color.isColor()) {
+                return color;
             }
         }
         return EnumChatFormatting.WHITE;
@@ -428,7 +490,7 @@ public class UHCCMod {
 
         @Override
         public String getCommandUsage(ICommandSender sender) {
-            return "/uc <start|stop|setapi|debug|help|c|size|xpos|ypos|resetpos|clear|toggle <tab/overlay/nametag>|overlaymaxid <number>|nametagheight <number>>";
+            return "/uc <start|stop|setapi|debug|help|c|size|xpos|ypos|resetpos|clear|resetkills|toggle <tab/overlay/nametag>|overlaymaxid <number>|nametagheight <number>>";
         }
 
         @Override
@@ -568,6 +630,13 @@ public class UHCCMod {
                     playerStatsMap.clear();
                     needsResort = true;
                     sender.addChatMessage(new ChatComponentText(EnumChatFormatting.GREEN + "已清除所有玩家统计数据"));
+                } else if (command.equals("resetkills") && args.length == 1) {
+                    if (killCount != null) {
+                        killCount.resetKills();
+                        sender.addChatMessage(new ChatComponentText(EnumChatFormatting.GREEN + "已重置所有击杀计数"));
+                    } else {
+                        sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + "击杀计数器未初始化"));
+                    }
                 } else if (command.equals("toggle") && args.length == 2) {
                     if (args[1].equalsIgnoreCase("tab")) {
                         showTabStats = !showTabStats;
@@ -632,7 +701,7 @@ public class UHCCMod {
         @Override
         public List<String> addTabCompletionOptions(ICommandSender sender, String[] args, net.minecraft.util.BlockPos pos) {
             if (args.length == 1) {
-                return CommandBase.getListOfStringsMatchingLastWord(args, "start", "stop", "setapi", "debug", "help", "c", "size", "xpos", "ypos", "resetpos", "clear", "toggle", "overlaymaxid", "nametagheight");
+                return CommandBase.getListOfStringsMatchingLastWord(args, "start", "stop", "setapi", "debug", "help", "c", "size", "xpos", "ypos", "resetpos", "clear", "resetkills", "toggle", "overlaymaxid", "nametagheight");
             } else if (args.length == 2 && args[0].equalsIgnoreCase("toggle")) {
                 return CommandBase.getListOfStringsMatchingLastWord(args, "tab", "overlay", "nametag");
             }
@@ -652,6 +721,7 @@ public class UHCCMod {
             sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + "/uc ypos <number> - 设置覆盖层 Y 位置"));
             sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + "/uc resetpos - 重置覆盖层位置和缩放"));
             sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + "/uc clear - 清除所有玩家统计数据"));
+            sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + "/uc resetkills - 重置所有击杀计数"));
             sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + "/uc toggle <tab/overlay/nametag> - 切换 Tab/覆盖层/头顶统计的显示"));
             sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + "/uc overlaymaxid <number> - 设置覆盖层每列最大玩家数"));
             sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + "/uc nametagheight <number> - 设置头顶统计高度"));
@@ -932,7 +1002,7 @@ public class UHCCMod {
         return 1;
     }
 
-    private static class PlayerStats {
+    public static class PlayerStats {
         int stars;
         int kills;
         int deaths;
@@ -944,6 +1014,7 @@ public class UHCCMod {
         boolean isQuerying;
         boolean hasApiError;
         List<String> artifacts;
+        int currentGameKills = 0;
 
         PlayerStats(int stars, int kills, int deaths, double kdr, int wins, int score, String equippedKit, List<String> artifacts) {
             this.stars = stars;
@@ -957,6 +1028,7 @@ public class UHCCMod {
             this.isQuerying = false;
             this.hasApiError = false;
             this.artifacts = artifacts;
+            this.currentGameKills = 0;
         }
 
         PlayerStats(boolean isNick) {
@@ -971,6 +1043,7 @@ public class UHCCMod {
             this.equippedKit = "None";
             this.hasApiError = false;
             this.artifacts = new ArrayList<>();
+            this.currentGameKills = 0;
         }
 
         PlayerStats(boolean isNick, boolean isQuerying) {
@@ -985,6 +1058,7 @@ public class UHCCMod {
             this.equippedKit = "None";
             this.hasApiError = false;
             this.artifacts = new ArrayList<>();
+            this.currentGameKills = 0;
         }
 
         public int getStars() {
