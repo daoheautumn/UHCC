@@ -1,8 +1,8 @@
 ## UHCC 使用指南
 
 ### 下载
-您可以在以下链接下载最新版本的 UHCC Mod：
-[Github releases](https://github.com/daoheautumn/UHCC/releases)
+您可以在[Releases](https://github.com/daoheautumn/UHCC/releases)里下载最新版本的 UHCC Mod：
+
 
 ### 前置要求
 - Minecraft 1.8.9
