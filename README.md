@@ -30,4 +30,4 @@ UHCC 需要 Hypixel API Key 才能正常工作。
 ```
 
 ##  License  
-This project is licensed under [MPL-2.0](https://github.com/daoheautumn/UHCC/blob/main/LICENSE).  
+This project is licensed under [MIT](https://github.com/daoheautumn/UHCC/blob/main/LICENSE).  
