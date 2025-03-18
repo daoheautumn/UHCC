@@ -1,4 +1,3 @@
-## UHCC 使用指南
 
 ### 下载
 你可以在[Releases](https://github.com/daoheautumn/UHCC/releases)里下载最新版本的 UHCC Mod
