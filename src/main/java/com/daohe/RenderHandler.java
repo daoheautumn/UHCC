@@ -27,7 +27,7 @@ public class RenderHandler {
     public static boolean showOverlayStats = true;
     public static boolean showNametagStats = true;
     public static int overlayMaxPlayers = 25;
-    public static KeyBinding overlayKey = new KeyBinding("Open Overlay", Keyboard.KEY_GRAVE, "UHCC");
+    public static KeyBinding overlayKey;
     private int currentPage = 0;
     private boolean wasRightClickPressed = false;
     public boolean needsResort = true;
@@ -35,6 +35,7 @@ public class RenderHandler {
 
     public RenderHandler(UHCCMod mod) {
         this.mod = mod;
+        overlayKey = new KeyBinding("Open Overlay", Keyboard.KEY_GRAVE, "UHCC");
     }
 
     @SubscribeEvent
