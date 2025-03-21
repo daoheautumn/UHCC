@@ -7,9 +7,9 @@
   "mcversion": "${mcversion}",
   "url": "https://space.bilibili.com/511496730",
   "updateUrl": "",
-  "authorList": ["daohe"],
+  "authorList": ["daoheautumn"],
   "credits": "",
-  "logoFile": "",
+  "logoFile": "nana7.png",
   "screenshots": [],
   "dependencies": []
 }
