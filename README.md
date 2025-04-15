@@ -4,12 +4,11 @@
 
 
 ### 前置要求
-- Minecraft 1.8.9
+- [Minecraft 1.8.9](https://piston-data.mojang.com/v1/objects/3870888a6c3d349d3771a3e9d16c9bf5e076b908/client.jar)
 - [Forge](https://files.minecraftforge.net/net/minecraftforge/forge/index_1.8.9.html)
-- Hypixel API Key（[申请链接](https://developer.hypixel.net/dashboard/)）
+- [Hypixel API Key](https://developer.hypixel.net/dashboard/)
 
 ### 配置 API Key
-UHCC 需要 Hypixel API Key 才能正常工作。
 
 在游戏中输入以下指令来设置 API Key：
 ```bash
@@ -21,6 +20,7 @@ UHCC 需要 Hypixel API Key 才能正常工作。
 ```bash
 /uc start
 ```
+之后你可以在游戏中按住```键(默认)来显示overlay
 
 ### 帮助指令
 查看所有可用指令：
