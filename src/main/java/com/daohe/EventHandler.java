@@ -9,17 +9,16 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.InputEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 import org.lwjgl.input.Mouse;
-
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
 public class EventHandler {
-
     private static final Minecraft mc = Minecraft.getMinecraft();
     private final UHCCMod mod;
     private long lastUpdateTime = 0;
+    private long lastNearbySyncTime = 0;
     public static volatile boolean isStopped = false;
 
     public EventHandler(UHCCMod mod) {
@@ -29,38 +28,38 @@ public class EventHandler {
     @SubscribeEvent
     public void onClientTick(TickEvent.ClientTickEvent event) {
         if (isStopped || event.phase != TickEvent.Phase.END || mc.thePlayer == null || mc.theWorld == null || !UHCCMod.isDetecting) return;
-
         long currentTime = System.currentTimeMillis();
         if (currentTime - lastUpdateTime >= 1000) {
             updatePlayerListFromTab();
             lastUpdateTime = currentTime;
-
-            if (Utils.isGameStarted()) {
-                for (Map.Entry<String, PlayerStats> entry : mod.getStatsManager().playerStatsMap.entrySet()) {
-                    String playerName = entry.getKey();
-                    PlayerStats stats = entry.getValue();
-                    boolean isNearby = Utils.isPlayerNearby(playerName);
-                    if (stats.isNearbyCached != isNearby) {
-                        stats.isNearbyCached = isNearby;
-                        mod.getRenderHandler().needsResort = true;
-                    }
+        }
+        if (currentTime - lastNearbySyncTime >= 5000) {
+            syncNearbyTags();
+            lastNearbySyncTime = currentTime;
+        }
+        if (Utils.isGameStarted()) {
+            for (Map.Entry<String, PlayerStats> entry : mod.getStatsManager().playerStatsMap.entrySet()) {
+                String playerName = entry.getKey();
+                PlayerStats stats = entry.getValue();
+                boolean isNearby = Utils.isPlayerNearby(playerName);
+                if (stats.isNearbyCached != isNearby) {
+                    stats.isNearbyCached = isNearby;
+                    mod.getRenderHandler().needsResort = true;
                 }
             }
-
-            if (!UHCCMod.apiKey.isEmpty() && Utils.isApiKeyExpired()) {
-                mc.thePlayer.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + ConfigManager.translate("command.uc.setapi.expired")));
-                isStopped = true;
-                UHCCMod.isDetecting = false;
-                Utils.clearStatsAndResetTab(mod.getStatsManager(), mod.getRenderHandler());
-                mod.getStatsManager().cancelAllQueries();
-            }
+        }
+        if (!UHCCMod.apiKey.isEmpty() && Utils.isApiKeyExpired()) {
+            mc.thePlayer.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + ConfigManager.translate("command.uc.setapi.expired")));
+            isStopped = true;
+            UHCCMod.isDetecting = false;
+            Utils.clearStatsAndResetTab(mod.getStatsManager(), mod.getRenderHandler());
+            mod.getStatsManager().cancelAllQueries();
         }
     }
 
     @SubscribeEvent
     public void onChat(ClientChatReceivedEvent event) {
         if (isStopped || mc.thePlayer == null || mc.theWorld == null || UHCCMod.apiKey.isEmpty()) return;
-
         String message = event.message.getUnformattedText();
         if (message.contains(" has joined ") && message.contains("/") && UHCCMod.isDetecting) {
             String playerName = message.split(" has joined ")[0].trim();
@@ -93,10 +92,8 @@ public class EventHandler {
 
     public void updatePlayerListFromTab() {
         if (mc.getNetHandler() == null || UHCCMod.apiKey.isEmpty()) return;
-
         Collection<NetworkPlayerInfo> playerInfoMap = mc.getNetHandler().getPlayerInfoMap();
         if (playerInfoMap == null) return;
-
         Set<String> currentPlayers = new HashSet<>();
         for (NetworkPlayerInfo playerInfo : playerInfoMap) {
             if (playerInfo == null || playerInfo.getGameProfile() == null) continue;
@@ -111,7 +108,6 @@ public class EventHandler {
                 mod.getStatsManager().submitPlayerQuery(playerName);
             }
         }
-
         mod.getStatsManager().playerStatsMap.entrySet().removeIf(entry -> {
             String playerName = entry.getKey();
             boolean shouldRemove = !currentPlayers.contains(playerName);
@@ -125,5 +121,21 @@ public class EventHandler {
             return shouldRemove;
         });
         mod.getRenderHandler().needsResort = true;
+    }
+
+    private void syncNearbyTags() {
+        if (!Utils.isGameStarted()) return;
+        for (Map.Entry<String, PlayerStats> entry : mod.getStatsManager().playerStatsMap.entrySet()) {
+            String playerName = entry.getKey();
+            PlayerStats stats = entry.getValue();
+            boolean isNearby = Utils.isPlayerNearby(playerName);
+            if (stats.isNearbyCached != isNearby) {
+                stats.isNearbyCached = isNearby;
+                mod.getRenderHandler().needsResort = true;
+                if (UHCCMod.debugMode) {
+                    System.out.println(playerName + " nearby status updated to: " + isNearby);
+                }
+            }
+        }
     }
 }

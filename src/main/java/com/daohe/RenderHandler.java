@@ -9,7 +9,6 @@ import net.minecraftforge.client.event.RenderLivingEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.GL11;
-
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -27,7 +26,7 @@ public class RenderHandler {
     public static boolean showOverlayStats = true;
     public static boolean showNametagStats = true;
     public static int overlayMaxPlayers = 25;
-    public static KeyBinding overlayKey = new KeyBinding("Open Overlay", Keyboard.KEY_GRAVE, "UHCC");
+    public static KeyBinding overlayKey;
     private int currentPage = 0;
     private boolean wasRightClickPressed = false;
     public boolean needsResort = true;
@@ -35,12 +34,12 @@ public class RenderHandler {
 
     public RenderHandler(UHCCMod mod) {
         this.mod = mod;
+        overlayKey = new KeyBinding("Open Overlay", Keyboard.KEY_GRAVE, "UHCC");
     }
 
     @SubscribeEvent
     public void onRenderGameOverlay(RenderGameOverlayEvent.Post event) {
         if (UHCCMod.apiKey.isEmpty()) return;
-
         if (event.type == RenderGameOverlayEvent.ElementType.ALL && showOverlayStats) {
             if (overlayKey.isKeyDown()) {
                 renderPlayerStatsOverlay();
@@ -51,11 +50,9 @@ public class RenderHandler {
     @SubscribeEvent
     public void onRenderLiving(RenderLivingEvent.Specials.Pre event) {
         if (!showNametagStats || !UHCCMod.isDetecting || event.entity == null || !(event.entity instanceof net.minecraft.entity.player.EntityPlayer)) return;
-
         String playerName = event.entity.getName();
         PlayerStats stats = mod.getStatsManager().playerStatsMap.get(playerName);
         if (stats == null) return;
-
         StringBuilder display = new StringBuilder();
         if (stats.isQuerying) {
             display.append(EnumChatFormatting.GRAY).append(ConfigManager.translate("tag.querying"));
@@ -70,7 +67,6 @@ public class RenderHandler {
             display.append(EnumChatFormatting.YELLOW).append("W: ").append(stats.wins);
             KillCount.appendKillCount(display, stats);
         }
-
         GL11.glPushMatrix();
         try {
             GL11.glTranslatef((float) event.x, (float) event.y + event.entity.height + nametagHeight, (float) event.z);
@@ -81,11 +77,9 @@ public class RenderHandler {
             GL11.glDisable(GL11.GL_LIGHTING);
             GL11.glDepthMask(false);
             GL11.glDisable(GL11.GL_DEPTH_TEST);
-
             FontRenderer fontRenderer = mc.fontRendererObj;
             int width = fontRenderer.getStringWidth(display.toString());
             fontRenderer.drawStringWithShadow(display.toString(), -width / 2, 0, 0xFFFFFF);
-
             GL11.glEnable(GL11.GL_DEPTH_TEST);
             GL11.glDepthMask(true);
             GL11.glEnable(GL11.GL_LIGHTING);
@@ -96,30 +90,24 @@ public class RenderHandler {
 
     private void renderPlayerStatsOverlay() {
         if (!UHCCMod.isDetecting || mc.thePlayer == null || mc.theWorld == null) return;
-
         GL11.glPushMatrix();
         try {
             GL11.glTranslatef(overlayX, overlayY, 0.0f);
             GL11.glScalef(overlayScale, overlayScale, 1.0f);
-
             if (needsResort) {
                 List<Map.Entry<String, PlayerStats>> allPlayers = new ArrayList<>(mod.getStatsManager().playerStatsMap.entrySet());
                 cachedSortedPlayers.clear();
-
                 String localPlayerName = mc.thePlayer.getName();
-
                 List<Map.Entry<String, PlayerStats>> user = new ArrayList<>();
                 List<Map.Entry<String, PlayerStats>> nearbyNicks = new ArrayList<>();
                 List<Map.Entry<String, PlayerStats>> nearbyRegulars = new ArrayList<>();
                 List<Map.Entry<String, PlayerStats>> nicks = new ArrayList<>();
                 List<Map.Entry<String, PlayerStats>> regulars = new ArrayList<>();
                 List<Map.Entry<String, PlayerStats>> querying = new ArrayList<>();
-
                 for (Map.Entry<String, PlayerStats> entry : allPlayers) {
                     String playerName = entry.getKey();
                     PlayerStats stats = entry.getValue();
                     boolean isNearby = stats.isNearbyCached;
-
                     if (playerName.equals(localPlayerName)) {
                         user.add(entry);
                     } else if (stats.isQuerying) {
@@ -134,28 +122,22 @@ public class RenderHandler {
                         regulars.add(entry);
                     }
                 }
-
                 nearbyRegulars.sort(Comparator.comparingDouble((Map.Entry<String, PlayerStats> entry) -> entry.getValue().getKdr()).reversed());
                 regulars.sort(Comparator.comparingDouble((Map.Entry<String, PlayerStats> entry) -> entry.getValue().getKdr()).reversed());
-
                 cachedSortedPlayers.addAll(user);
                 cachedSortedPlayers.addAll(nearbyNicks);
                 cachedSortedPlayers.addAll(nearbyRegulars);
                 cachedSortedPlayers.addAll(nicks);
                 cachedSortedPlayers.addAll(regulars);
                 cachedSortedPlayers.addAll(querying);
-
                 needsResort = false;
             }
-
             FontRenderer fontRenderer = mc.fontRendererObj;
             int totalPlayers = cachedSortedPlayers.size();
             int rowHeight = 10;
             int y = 0;
-
             int totalPages = (int) Math.ceil((double) totalPlayers / overlayMaxPlayers);
             String titleText = ConfigManager.translate("mod.overlay.total_players", totalPlayers, currentPage + 1, totalPages);
-
             int[] baseColumnOffsets = new int[] {0, 40, 70, 150, 180};
             String[] columnHeaders = new String[] {
                     ConfigManager.translate("overlay.header.tag"),
@@ -164,17 +146,13 @@ public class RenderHandler {
                     ConfigManager.translate("overlay.header.kdr"),
                     ConfigManager.translate("overlay.header.wins")
             };
-
             int[] adjustedColumnOffsets = new int[baseColumnOffsets.length];
             System.arraycopy(baseColumnOffsets, 0, adjustedColumnOffsets, 0, baseColumnOffsets.length);
-
             int startIdx = currentPage * overlayMaxPlayers;
             int endIdx = Math.min(startIdx + overlayMaxPlayers, totalPlayers);
-
             int maxWidth = 0;
             int visibleRows = Math.min(endIdx - startIdx, overlayMaxPlayers) + 2;
             int backgroundHeight = visibleRows * rowHeight;
-
             boolean hasKills = false;
             for (Map.Entry<String, PlayerStats> entry : cachedSortedPlayers) {
                 if (entry.getValue().currentGameKills > 0) {
@@ -182,23 +160,19 @@ public class RenderHandler {
                     break;
                 }
             }
-
             int killColumnOffset = adjustedColumnOffsets[4] + 50;
             if (hasKills) {
                 killColumnOffset = adjustedColumnOffsets[4] + 50;
             }
-
             int titleWidth = fontRenderer.getStringWidth(titleText);
             if (titleWidth > maxWidth) {
                 maxWidth = titleWidth;
             }
-
             for (int i = startIdx; i < endIdx; i++) {
                 Map.Entry<String, PlayerStats> entry = cachedSortedPlayers.get(i);
                 String playerName = entry.getKey();
                 PlayerStats stats = entry.getValue();
                 EnumChatFormatting nameColor = getPlayerColor(playerName);
-
                 String tag = getPlayerTag(playerName, stats);
                 int tagWidth = fontRenderer.getStringWidth(tag);
                 int offsetIncrease = 0;
@@ -208,7 +182,6 @@ public class RenderHandler {
                         adjustedColumnOffsets[j] += offsetIncrease;
                     }
                 }
-
                 String starsDisplay = "";
                 if (stats.isQuerying) {
                     starsDisplay = "";
@@ -225,7 +198,6 @@ public class RenderHandler {
                         adjustedColumnOffsets[j] += offsetIncrease;
                     }
                 }
-
                 String nameDisplay = nameColor + playerName + EnumChatFormatting.RESET;
                 int nameWidth = fontRenderer.getStringWidth(nameDisplay);
                 if (nameWidth > (adjustedColumnOffsets[3] - adjustedColumnOffsets[2])) {
@@ -234,7 +206,6 @@ public class RenderHandler {
                         adjustedColumnOffsets[j] += offsetIncrease;
                     }
                 }
-
                 String kdrDisplay = "";
                 if (stats.isQuerying) {
                     kdrDisplay = "";
@@ -249,7 +220,6 @@ public class RenderHandler {
                     offsetIncrease = kdrWidth - (adjustedColumnOffsets[4] - adjustedColumnOffsets[3]) + 15;
                     adjustedColumnOffsets[4] += offsetIncrease;
                 }
-
                 String winsDisplay = "";
                 if (stats.isQuerying) {
                     winsDisplay = "";
@@ -264,7 +234,6 @@ public class RenderHandler {
                     offsetIncrease = winsWidth - (adjustedColumnOffsets[4] - adjustedColumnOffsets[3]) + 15;
                     adjustedColumnOffsets[4] += offsetIncrease;
                 }
-
                 int totalRowWidth = adjustedColumnOffsets[4] + 50;
                 if (hasKills) {
                     String killsDisplay = stats.currentGameKills > 0 ? EnumChatFormatting.DARK_RED + String.valueOf(stats.currentGameKills) + EnumChatFormatting.RESET : "";
@@ -273,15 +242,12 @@ public class RenderHandler {
                         totalRowWidth = killColumnOffset + killsWidth + 15;
                     }
                 }
-
                 if (totalRowWidth > maxWidth) {
                     maxWidth = totalRowWidth;
                 }
             }
-
             int headerY = y + rowHeight;
             int dataStartY = headerY + rowHeight;
-
             GL11.glDisable(GL11.GL_TEXTURE_2D);
             GL11.glEnable(GL11.GL_BLEND);
             GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
@@ -292,7 +258,6 @@ public class RenderHandler {
             GL11.glVertex2f(maxWidth + 5, y + backgroundHeight + 5);
             GL11.glVertex2f(maxWidth + 5, y - 5);
             GL11.glEnd();
-
             int rowY = dataStartY;
             for (int i = startIdx; i < endIdx; i++) {
                 float rowTop = rowY - 1;
@@ -310,10 +275,8 @@ public class RenderHandler {
                 GL11.glEnd();
                 rowY += rowHeight;
             }
-
             GL11.glDisable(GL11.GL_BLEND);
             GL11.glEnable(GL11.GL_TEXTURE_2D);
-
             fontRenderer.drawStringWithShadow(titleText, 0, y, 0xFFFFFF);
             for (int i = 0; i < columnHeaders.length; i++) {
                 fontRenderer.drawStringWithShadow(columnHeaders[i], adjustedColumnOffsets[i], headerY, 0xFFFFFF);
@@ -321,17 +284,14 @@ public class RenderHandler {
             if (hasKills) {
                 fontRenderer.drawStringWithShadow(ConfigManager.translate("overlay.header.kills"), killColumnOffset, headerY, 0xFFFFFF);
             }
-
             rowY = dataStartY;
             for (int i = startIdx; i < endIdx; i++) {
                 Map.Entry<String, PlayerStats> entry = cachedSortedPlayers.get(i);
                 String playerName = entry.getKey();
                 PlayerStats stats = entry.getValue();
                 EnumChatFormatting nameColor = getPlayerColor(playerName);
-
                 String tag = getPlayerTag(playerName, stats);
                 fontRenderer.drawStringWithShadow(tag, adjustedColumnOffsets[0], rowY, 0xFFFFFF);
-
                 String starsDisplay;
                 if (stats.isQuerying) {
                     starsDisplay = "";
@@ -344,10 +304,8 @@ public class RenderHandler {
                     starsDisplay = "";
                 }
                 fontRenderer.drawStringWithShadow(starsDisplay, adjustedColumnOffsets[1], rowY, 0xFFFFFF);
-
                 String nameDisplay = nameColor + playerName + EnumChatFormatting.RESET;
                 fontRenderer.drawStringWithShadow(nameDisplay, adjustedColumnOffsets[2], rowY, 0xFFFFFF);
-
                 String kdrDisplay;
                 if (stats.isQuerying) {
                     kdrDisplay = "";
@@ -360,7 +318,6 @@ public class RenderHandler {
                     kdrDisplay = "";
                 }
                 fontRenderer.drawStringWithShadow(kdrDisplay, adjustedColumnOffsets[3], rowY, 0xFFFFFF);
-
                 String winsDisplay;
                 if (stats.isQuerying) {
                     winsDisplay = "";
@@ -373,12 +330,10 @@ public class RenderHandler {
                     winsDisplay = "";
                 }
                 fontRenderer.drawStringWithShadow(winsDisplay, adjustedColumnOffsets[4], rowY, 0xFFFFFF);
-
                 if (hasKills && stats.currentGameKills > 0) {
                     String killsDisplay = EnumChatFormatting.DARK_RED + String.valueOf(stats.currentGameKills) + EnumChatFormatting.RESET;
                     fontRenderer.drawStringWithShadow(killsDisplay, killColumnOffset, rowY, 0xFFFFFF);
                 }
-
                 rowY += rowHeight;
             }
         } finally {
@@ -388,7 +343,6 @@ public class RenderHandler {
 
     private String getPlayerTag(String playerName, PlayerStats stats) {
         List<String> tags = new ArrayList<>();
-
         if (playerName.equals(mc.thePlayer.getName())) {
             tags.add(EnumChatFormatting.BLUE + ConfigManager.translate("tag.user"));
         }
@@ -407,7 +361,6 @@ public class RenderHandler {
         } else if (stats.stars <= 1 && stats.wins == 0 && stats.kdr < 0.5) {
             tags.add(EnumChatFormatting.DARK_GRAY + ConfigManager.translate("tag.noob"));
         }
-
         if (tags.size() > 1) {
             StringBuilder shortTags = new StringBuilder();
             for (int i = 0; i < tags.size(); i++) {

@@ -8,18 +8,26 @@ import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.common.config.Property;
-
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.net.URL;
+import java.net.HttpURLConnection;
+import java.io.InputStreamReader;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import net.minecraft.client.Minecraft;
 
 public class CommandHandler {
     private final UHCCMod mod;
     private final UCCommand command;
     private final PlayerQueryHandler queryHandler;
     private static final DecimalFormat df = new DecimalFormat("#.##");
+    private static final ExecutorService executor = Executors.newSingleThreadExecutor();
 
     public CommandHandler(UHCCMod mod) {
         this.mod = mod;
@@ -29,6 +37,35 @@ public class CommandHandler {
 
     public CommandBase getCommand() {
         return command;
+    }
+
+    private void testApiKeyAsync(String apiKey, ICommandSender sender, Runnable onSuccess) {
+        executor.submit(() -> {
+            boolean isValid = false;
+            try {
+                URL url = new URL("https://api.hypixel.net/player?key=" + apiKey);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setConnectTimeout(5000);
+                conn.setReadTimeout(5000);
+                int responseCode = conn.getResponseCode();
+                if (responseCode == 400) {
+                    isValid = true;
+                }
+            } catch (Exception e) {
+                if (UHCCMod.debugMode) {
+                    System.out.println("API Key test failed: " + e.getMessage());
+                }
+            }
+            final boolean finalIsValid = isValid;
+            Minecraft.getMinecraft().addScheduledTask(() -> {
+                if (finalIsValid) {
+                    onSuccess.run();
+                } else {
+                    sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + ConfigManager.translate("command.uc.setapi.invalid")));
+                }
+            });
+        });
     }
 
     class UCCommand extends CommandBase {
@@ -48,9 +85,7 @@ public class CommandHandler {
                 sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + ConfigManager.translate("command.uc.error")));
                 return;
             }
-
             String subCommand = args[0].toLowerCase();
-
             switch (subCommand) {
                 case "start":
                     if (args.length != 1) {
@@ -61,24 +96,25 @@ public class CommandHandler {
                         sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + ConfigManager.translate("command.uc.setapi.no_key")));
                         return;
                     }
-                    if (Utils.isApiKeyExpired()) {
-                        sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + ConfigManager.translate("command.uc.setapi.expired")));
-                        return;
-                    }
-                    if (EventHandler.isStopped) {
-                        EventHandler.isStopped = false;
-                        UHCCMod.isDetecting = true;
-                        sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + ConfigManager.translate("command.uc.start.reenabled")));
-                        mod.getEventHandler().updatePlayerListFromTab();
-                    } else if (!UHCCMod.isDetecting) {
-                        UHCCMod.isDetecting = true;
-                        sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + ConfigManager.translate("command.uc.start.detecting")));
-                        mod.getEventHandler().updatePlayerListFromTab();
-                    } else {
-                        sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + ConfigManager.translate("command.uc.start.already")));
-                    }
+                    testApiKeyAsync(UHCCMod.apiKey, sender, () -> {
+                        if (Utils.isApiKeyExpired()) {
+                            sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + ConfigManager.translate("command.uc.setapi.expired")));
+                            return;
+                        }
+                        if (EventHandler.isStopped) {
+                            EventHandler.isStopped = false;
+                            UHCCMod.isDetecting = true;
+                            sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + ConfigManager.translate("command.uc.start.reenabled")));
+                            mod.getEventHandler().updatePlayerListFromTab();
+                        } else if (!UHCCMod.isDetecting) {
+                            UHCCMod.isDetecting = true;
+                            sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + ConfigManager.translate("command.uc.start.detecting")));
+                            mod.getEventHandler().updatePlayerListFromTab();
+                        } else {
+                            sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + ConfigManager.translate("command.uc.start.already")));
+                        }
+                    });
                     break;
-
                 case "stop":
                     if (args.length != 1) {
                         sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + ConfigManager.translate("command.uc.error")));
@@ -90,23 +126,24 @@ public class CommandHandler {
                     mod.getStatsManager().cancelAllQueries();
                     sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + ConfigManager.translate("command.uc.stop")));
                     break;
-
                 case "setapi":
                     if (args.length != 2) {
                         sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + ConfigManager.translate("command.uc.error")));
                         return;
                     }
-                    UHCCMod.apiKey = args[1];
-                    ConfigManager.apiKeySetTime = System.currentTimeMillis();
-                    mod.getConfigManager().getConfig().get(Configuration.CATEGORY_GENERAL, "apiKey", "", "").set(UHCCMod.apiKey);
-                    mod.getConfigManager().getConfig().get(Configuration.CATEGORY_GENERAL, "apiKeySetTime", "", "").set(new SimpleDateFormat("yyyy-MM-dd HH:mm").format(new Date(ConfigManager.apiKeySetTime)));
-                    mod.getConfigManager().getConfig().save();
-                    sender.addChatMessage(new ChatComponentText(EnumChatFormatting.GREEN + ConfigManager.translate("command.uc.setapi.success")));
-                    if (UHCCMod.debugMode) {
-                        System.out.println("API Key set");
-                    }
+                    String newApiKey = args[1];
+                    testApiKeyAsync(newApiKey, sender, () -> {
+                        UHCCMod.apiKey = newApiKey;
+                        ConfigManager.apiKeySetTime = System.currentTimeMillis();
+                        mod.getConfigManager().getConfig().get(Configuration.CATEGORY_GENERAL, "apiKey", "", "").set(UHCCMod.apiKey);
+                        mod.getConfigManager().getConfig().get(Configuration.CATEGORY_GENERAL, "apiKeySetTime", "", "").set(new SimpleDateFormat("yyyy-MM-dd HH:mm").format(new Date(ConfigManager.apiKeySetTime)));
+                        mod.getConfigManager().getConfig().save();
+                        sender.addChatMessage(new ChatComponentText(EnumChatFormatting.GREEN + ConfigManager.translate("command.uc.setapi.success")));
+                        if (UHCCMod.debugMode) {
+                            System.out.println("API Key set: " + newApiKey);
+                        }
+                    });
                     break;
-
                 case "c":
                     if (args.length != 2) {
                         sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + ConfigManager.translate("command.uc.error")));
@@ -115,7 +152,6 @@ public class CommandHandler {
                     String targetPlayer = args[1];
                     queryHandler.handlePlayerQuery(sender, targetPlayer, true);
                     break;
-
                 case "debug":
                     if (args.length != 1) {
                         sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + ConfigManager.translate("command.uc.error")));
@@ -127,7 +163,6 @@ public class CommandHandler {
                         sender.addChatMessage(new ChatComponentText(EnumChatFormatting.YELLOW + ConfigManager.translate("command.uc.debug.hint")));
                     }
                     break;
-
                 case "help":
                     if (args.length != 1) {
                         sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + ConfigManager.translate("command.uc.error")));
@@ -135,7 +170,6 @@ public class CommandHandler {
                     }
                     showHelpPanel(sender);
                     break;
-
                 case "size":
                     if (args.length != 2) {
                         sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + ConfigManager.translate("command.uc.error")));
@@ -157,7 +191,6 @@ public class CommandHandler {
                         sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + ConfigManager.translate("command.uc.size.invalid")));
                     }
                     break;
-
                 case "xpos":
                     if (args.length != 2) {
                         sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + ConfigManager.translate("command.uc.error")));
@@ -179,7 +212,6 @@ public class CommandHandler {
                         sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + ConfigManager.translate("command.uc.xpos.invalid")));
                     }
                     break;
-
                 case "ypos":
                     if (args.length != 2) {
                         sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + ConfigManager.translate("command.uc.error")));
@@ -201,7 +233,6 @@ public class CommandHandler {
                         sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + ConfigManager.translate("command.uc.ypos.invalid")));
                     }
                     break;
-
                 case "resetpos":
                     if (args.length != 1) {
                         sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + ConfigManager.translate("command.uc.error")));
@@ -218,7 +249,6 @@ public class CommandHandler {
                     mod.getConfigManager().getConfig().save();
                     sender.addChatMessage(new ChatComponentText(EnumChatFormatting.GREEN + ConfigManager.translate("command.uc.resetpos")));
                     break;
-
                 case "toggle":
                     if (args.length != 2) {
                         sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + ConfigManager.translate("command.uc.error")));
@@ -242,7 +272,6 @@ public class CommandHandler {
                             break;
                     }
                     break;
-
                 case "overlaymaxid":
                     if (args.length != 2) {
                         sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + ConfigManager.translate("command.uc.error")));
@@ -262,7 +291,6 @@ public class CommandHandler {
                         sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + ConfigManager.translate("command.uc.overlaymaxid.invalid")));
                     }
                     break;
-
                 case "nametagheight":
                     if (args.length != 2) {
                         sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + ConfigManager.translate("command.uc.error")));
@@ -284,7 +312,6 @@ public class CommandHandler {
                         sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + ConfigManager.translate("command.uc.nametagheight.invalid")));
                     }
                     break;
-
                 case "lang":
                     if (args.length != 2) {
                         sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + ConfigManager.translate("command.uc.error")));
@@ -300,7 +327,6 @@ public class CommandHandler {
                     mod.getConfigManager().getConfig().save();
                     sender.addChatMessage(new ChatComponentText(EnumChatFormatting.GREEN + ConfigManager.translate("command.uc.lang.set", lang.equals("en") ? "English" : "中文")));
                     break;
-
                 default:
                     sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + ConfigManager.translate("command.uc.error")));
                     break;

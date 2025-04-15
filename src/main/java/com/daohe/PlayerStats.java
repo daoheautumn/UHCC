@@ -79,11 +79,11 @@ public class PlayerStats {
     }
 
     public void generateObfuscatedData() {
-        this.nickObfuscatedStars = "§e§k" + random.nextInt(10) + "§r";
+        this.nickObfuscatedStars = "§e§k" + (random.nextInt(10) + 1);
         int kdrDigits = random.nextBoolean() ? 2 : 3;
-        this.nickObfuscatedKdr = "§c§k" + (kdrDigits == 2 ? random.nextInt(90) + 10 : random.nextInt(900) + 100) + "§r";
+        this.nickObfuscatedKdr = "§c§k" + (kdrDigits == 2 ? random.nextInt(90) + 10 : random.nextInt(900) + 100);
         int winsDigits = random.nextBoolean() ? 1 : 2;
-        this.nickObfuscatedWins = "§6§k" + (winsDigits == 1 ? random.nextInt(10) : random.nextInt(11) + 10) + "§r";
+        this.nickObfuscatedWins = "§6§k" + (winsDigits == 1 ? random.nextInt(9) + 1 : random.nextInt(90) + 10);
     }
 
     public double getKdr() {

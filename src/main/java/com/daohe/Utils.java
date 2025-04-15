@@ -22,12 +22,12 @@ public class Utils {
             return false;
         }
         EntityPlayer player = mc.theWorld.getPlayerEntityByName(playerName);
-        if (player == null || player == mc.thePlayer) {
+        if (player == null || player == mc.thePlayer || player.isDead) {
             return false;
         }
         double renderDistance = mc.gameSettings.renderDistanceChunks * 16;
         double distance = mc.thePlayer.getDistanceToEntity(player);
-        return distance <= renderDistance;
+        return distance <= renderDistance && player.isEntityAlive();
     }
 
     public static void clearStatsAndResetTab(PlayerStatsManager statsManager, RenderHandler renderHandler) {

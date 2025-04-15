@@ -2,7 +2,6 @@ package com.daohe;
 
 import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.common.config.Property;
-
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
@@ -11,7 +10,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class ConfigManager {
-
     private final UHCCMod mod;
     private Configuration config;
     private static final DecimalFormat df = new DecimalFormat("#.##");
@@ -19,7 +17,6 @@ public class ConfigManager {
     public static String currentLang = "en_US";
     private static final Map<String, Map<String, String>> languageMap = new HashMap<>();
     public static long apiKeySetTime = 0;
-
     private static final Map<String, String> DEFAULT_ARTIFACTS_EN = new HashMap<>();
     private static final Map<String, String> DEFAULT_ARTIFACTS_CN = new HashMap<>();
 
@@ -51,7 +48,6 @@ public class ConfigManager {
         DEFAULT_ARTIFACTS_EN.put("expert_seal", "Expert Seal");
         DEFAULT_ARTIFACTS_EN.put("hermes_boots", "Hermes Boots");
         DEFAULT_ARTIFACTS_EN.put("barbarian_chestplate", "Barbarian Chestplate");
-
         DEFAULT_ARTIFACTS_CN.put("artemis_bow", "自瞄弓");
         DEFAULT_ARTIFACTS_CN.put("flask_of_ichor", "瞬三药");
         DEFAULT_ARTIFACTS_CN.put("exodus", "永生帽");
@@ -88,7 +84,6 @@ public class ConfigManager {
     public void loadConfig(File configFile) {
         config = new Configuration(configFile);
         config.load();
-
         UHCCMod.apiKey = config.getString("apiKey", Configuration.CATEGORY_GENERAL, "", "");
         String apiKeyTimeStr = config.getString("apiKeySetTime", Configuration.CATEGORY_GENERAL, "", "");
         if (!apiKeyTimeStr.isEmpty()) {
@@ -98,7 +93,6 @@ public class ConfigManager {
                 apiKeySetTime = 0;
             }
         }
-
         RenderHandler.overlayX = getFormattedFloat(config, "overlayX", Configuration.CATEGORY_GENERAL, 90.0f, -1000.0f, 1000.0f);
         RenderHandler.overlayY = getFormattedFloat(config, "overlayY", Configuration.CATEGORY_GENERAL, 10.0f, -1000.0f, 1000.0f);
         RenderHandler.overlayScale = getFormattedFloat(config, "overlayScale", Configuration.CATEGORY_GENERAL, 0.6f, 0.01f, 1.0f);
@@ -107,9 +101,7 @@ public class ConfigManager {
         RenderHandler.showNametagStats = config.getBoolean("showNametagStats", Configuration.CATEGORY_GENERAL, true, "");
         RenderHandler.overlayMaxPlayers = config.getInt("overlayMaxPlayers", Configuration.CATEGORY_GENERAL, 25, 1, 1000, "");
         currentLang = config.getString("language", Configuration.CATEGORY_GENERAL, "en_US", "");
-
         config.save();
-
         loadLanguages(configFile.getParentFile());
         if (!languageMap.containsKey(currentLang)) {
             currentLang = "en_US";
@@ -142,7 +134,6 @@ public class ConfigManager {
         if (!langDir.exists()) {
             langDir.mkdirs();
         }
-
         String[] langs = {"en_US", "zh_CN"};
         for (String lang : langs) {
             Map<String, String> translations = new HashMap<>();
