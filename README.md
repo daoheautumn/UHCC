@@ -11,12 +11,12 @@
   - 在游戏中输入`/uc setapi <YOUR_API_KEY>`以设置 API Key：
 
 # 启动 Mod
-启用 Mod 功能的指令：
+- 启用 Mod 的指令：
 ```bash
 /uc start
 ```
-之后你可以在游戏中按住`` ` ``键(默认)来显示overlay
-使用**鼠标右键**以翻页
+- 之后你可以在游戏中按住`` ` ``键(默认)来显示overlay
+- 使用**鼠标右键**以翻页
 
 # Commands
 查看所有可用指令：
