@@ -2,7 +2,7 @@
 # UHCC mod
 - **A in game Hypixel UHC stats overlay**
 
-# Reqiurements
+# 前置要求
 - [Minecraft 1.8.9](https://piston-data.mojang.com/v1/objects/3870888a6c3d349d3771a3e9d16c9bf5e076b908/client.jar)
 - [Forge](https://files.minecraftforge.net/net/minecraftforge/forge/index_1.8.9.html)
 - [Hypixel API Key](https://developer.hypixel.net/dashboard/)
