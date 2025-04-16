@@ -6,7 +6,6 @@
   "version": "${version}",
   "mcversion": "${mcversion}",
   "url": "https://github.com/daoheautumn/AutumnMod",
-  "updateUrl",: "",
   "authorList": ["daoheautumn"],
   "credits": "",
   "logoFile": "nana7.png",
