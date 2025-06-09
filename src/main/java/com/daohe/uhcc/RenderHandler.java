@@ -1,4 +1,4 @@
-package com.daohe;
+package com.daohe.uhcc;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
@@ -60,8 +60,7 @@ public class RenderHandler {
             display.append(EnumChatFormatting.DARK_PURPLE).append(ConfigManager.translate("tag.nick"));
             KillCount.appendKillCount(display, stats);
         } else {
-            display.append(getPlayerTag(playerName, stats));
-            display.append(" ").append(EnumChatFormatting.RESET);
+            display.append(EnumChatFormatting.RESET);
             display.append(EnumChatFormatting.GOLD).append(stats.stars).append("✫ ");
             display.append(EnumChatFormatting.GREEN).append("KDR: ").append(df.format(stats.kdr)).append(" ");
             display.append(EnumChatFormatting.YELLOW).append("W: ").append(stats.wins);
@@ -173,7 +172,7 @@ public class RenderHandler {
                 String playerName = entry.getKey();
                 PlayerStats stats = entry.getValue();
                 EnumChatFormatting nameColor = getPlayerColor(playerName);
-                String tag = getPlayerTag(playerName, stats);
+                String tag = getPlayerTag(playerName, stats, false);
                 int tagWidth = fontRenderer.getStringWidth(tag);
                 int offsetIncrease = 0;
                 if (!stats.isQuerying && tagWidth > (adjustedColumnOffsets[1] - adjustedColumnOffsets[0])) {
@@ -183,13 +182,16 @@ public class RenderHandler {
                     }
                 }
                 String starsDisplay = "";
+                int starsColor = 0xFFFFFF;
                 if (stats.isQuerying) {
                     starsDisplay = "";
                 } else if (stats.isNick) {
-                    starsDisplay = stats.nickObfuscatedStars + EnumChatFormatting.YELLOW + "✰" + EnumChatFormatting.RESET;
+                    starsDisplay = EnumChatFormatting.DARK_GRAY.toString() + "-";
+                    starsColor = 0x555555;
                 } else if (!stats.hasApiError) {
                     String starsNumColor = stats.stars == 0 ? EnumChatFormatting.GRAY.toString() : EnumChatFormatting.YELLOW.toString();
-                    starsDisplay = starsNumColor + stats.stars + EnumChatFormatting.YELLOW + "✰" + EnumChatFormatting.RESET;
+                    starsDisplay = starsNumColor + stats.stars + EnumChatFormatting.YELLOW.toString() + "✰" + EnumChatFormatting.RESET.toString();
+                    starsColor = stats.stars == 0 ? 0x808080 : 0xFFFF00;
                 }
                 int starsWidth = fontRenderer.getStringWidth(starsDisplay);
                 if (starsWidth > (adjustedColumnOffsets[2] - adjustedColumnOffsets[1])) {
@@ -198,22 +200,25 @@ public class RenderHandler {
                         adjustedColumnOffsets[j] += offsetIncrease;
                     }
                 }
-                String nameDisplay = nameColor + playerName + EnumChatFormatting.RESET;
+                String nameDisplay = nameColor + playerName + EnumChatFormatting.RESET.toString();
                 int nameWidth = fontRenderer.getStringWidth(nameDisplay);
                 if (nameWidth > (adjustedColumnOffsets[3] - adjustedColumnOffsets[2])) {
-                    offsetIncrease = nameWidth - (adjustedColumnOffsets[3] - adjustedColumnOffsets[2]) + 15;
+                    offsetIncrease = nameWidth - (adjustedColumnOffsets[3] - adjustedColumnOffsets[2]) + 10;
                     for (int j = 3; j < adjustedColumnOffsets.length; j++) {
                         adjustedColumnOffsets[j] += offsetIncrease;
                     }
                 }
                 String kdrDisplay = "";
+                int kdrColor = 0xFFFFFF;
                 if (stats.isQuerying) {
                     kdrDisplay = "";
                 } else if (stats.isNick) {
-                    kdrDisplay = stats.nickObfuscatedKdr + EnumChatFormatting.RESET;
+                    kdrDisplay = EnumChatFormatting.DARK_GRAY.toString() + "-";
+                    kdrColor = 0x555555;
                 } else if (!stats.hasApiError) {
                     String kdrNumColor = stats.kdr == 0.0 ? EnumChatFormatting.GRAY.toString() : EnumChatFormatting.RED.toString();
-                    kdrDisplay = kdrNumColor + df.format(stats.kdr) + EnumChatFormatting.RESET;
+                    kdrDisplay = kdrNumColor + df.format(stats.kdr) + EnumChatFormatting.RESET.toString();
+                    kdrColor = stats.kdr == 0.0 ? 0x808080 : 0xFF0000;
                 }
                 int kdrWidth = fontRenderer.getStringWidth(kdrDisplay);
                 if (kdrWidth > (adjustedColumnOffsets[4] - adjustedColumnOffsets[3])) {
@@ -221,13 +226,16 @@ public class RenderHandler {
                     adjustedColumnOffsets[4] += offsetIncrease;
                 }
                 String winsDisplay = "";
+                int winsColor = 0xFFFFFF;
                 if (stats.isQuerying) {
                     winsDisplay = "";
                 } else if (stats.isNick) {
-                    winsDisplay = stats.nickObfuscatedWins + EnumChatFormatting.RESET;
+                    winsDisplay = EnumChatFormatting.DARK_GRAY.toString() + "-";
+                    winsColor = 0x555555;
                 } else if (!stats.hasApiError) {
                     String winsNumColor = stats.wins == 0 ? EnumChatFormatting.GRAY.toString() : EnumChatFormatting.GOLD.toString();
-                    winsDisplay = winsNumColor + stats.wins + EnumChatFormatting.RESET;
+                    winsDisplay = winsNumColor + stats.wins + EnumChatFormatting.RESET.toString();
+                    winsColor = stats.wins == 0 ? 0x808080 : 0xFFD700;
                 }
                 int winsWidth = fontRenderer.getStringWidth(winsDisplay);
                 if (winsWidth > (adjustedColumnOffsets[4] - adjustedColumnOffsets[3])) {
@@ -236,7 +244,7 @@ public class RenderHandler {
                 }
                 int totalRowWidth = adjustedColumnOffsets[4] + 50;
                 if (hasKills) {
-                    String killsDisplay = stats.currentGameKills > 0 ? EnumChatFormatting.DARK_RED + String.valueOf(stats.currentGameKills) + EnumChatFormatting.RESET : "";
+                    String killsDisplay = stats.currentGameKills > 0 ? EnumChatFormatting.DARK_RED.toString() + String.valueOf(stats.currentGameKills) + EnumChatFormatting.RESET.toString() : "";
                     int killsWidth = fontRenderer.getStringWidth(killsDisplay);
                     if (killsWidth > 0) {
                         totalRowWidth = killColumnOffset + killsWidth + 15;
@@ -290,48 +298,51 @@ public class RenderHandler {
                 String playerName = entry.getKey();
                 PlayerStats stats = entry.getValue();
                 EnumChatFormatting nameColor = getPlayerColor(playerName);
-                String tag = getPlayerTag(playerName, stats);
+                String tag = getPlayerTag(playerName, stats, false);
                 fontRenderer.drawStringWithShadow(tag, adjustedColumnOffsets[0], rowY, 0xFFFFFF);
-                String starsDisplay;
+                String starsDisplay = "";
+                int starsColor = 0xFFFFFF;
                 if (stats.isQuerying) {
                     starsDisplay = "";
                 } else if (stats.isNick) {
-                    starsDisplay = stats.nickObfuscatedStars + EnumChatFormatting.YELLOW + "✰" + EnumChatFormatting.RESET;
+                    starsDisplay = EnumChatFormatting.DARK_GRAY.toString() + "-";
+                    starsColor = 0x555555;
                 } else if (!stats.hasApiError) {
                     String starsNumColor = stats.stars == 0 ? EnumChatFormatting.GRAY.toString() : EnumChatFormatting.YELLOW.toString();
-                    starsDisplay = starsNumColor + stats.stars + EnumChatFormatting.YELLOW + "✰" + EnumChatFormatting.RESET;
-                } else {
-                    starsDisplay = "";
+                    starsDisplay = starsNumColor + stats.stars + EnumChatFormatting.YELLOW.toString() + "✰" + EnumChatFormatting.RESET.toString();
+                    starsColor = stats.stars == 0 ? 0x808080 : 0xFFFF00;
                 }
-                fontRenderer.drawStringWithShadow(starsDisplay, adjustedColumnOffsets[1], rowY, 0xFFFFFF);
-                String nameDisplay = nameColor + playerName + EnumChatFormatting.RESET;
+                fontRenderer.drawStringWithShadow(starsDisplay, adjustedColumnOffsets[1], rowY, starsColor);
+                String nameDisplay = nameColor + playerName + EnumChatFormatting.RESET.toString();
                 fontRenderer.drawStringWithShadow(nameDisplay, adjustedColumnOffsets[2], rowY, 0xFFFFFF);
-                String kdrDisplay;
+                String kdrDisplay = "";
+                int kdrColor = 0xFFFFFF;
                 if (stats.isQuerying) {
                     kdrDisplay = "";
                 } else if (stats.isNick) {
-                    kdrDisplay = stats.nickObfuscatedKdr + EnumChatFormatting.RESET;
+                    kdrDisplay = EnumChatFormatting.DARK_GRAY.toString() + "-";
+                    kdrColor = 0x555555;
                 } else if (!stats.hasApiError) {
                     String kdrNumColor = stats.kdr == 0.0 ? EnumChatFormatting.GRAY.toString() : EnumChatFormatting.RED.toString();
-                    kdrDisplay = kdrNumColor + df.format(stats.kdr) + EnumChatFormatting.RESET;
-                } else {
-                    kdrDisplay = "";
+                    kdrDisplay = kdrNumColor + df.format(stats.kdr) + EnumChatFormatting.RESET.toString();
+                    kdrColor = stats.kdr == 0.0 ? 0x808080 : 0xFF0000;
                 }
-                fontRenderer.drawStringWithShadow(kdrDisplay, adjustedColumnOffsets[3], rowY, 0xFFFFFF);
-                String winsDisplay;
+                fontRenderer.drawStringWithShadow(kdrDisplay, adjustedColumnOffsets[3], rowY, kdrColor);
+                String winsDisplay = "";
+                int winsColor = 0xFFFFFF;
                 if (stats.isQuerying) {
                     winsDisplay = "";
                 } else if (stats.isNick) {
-                    winsDisplay = stats.nickObfuscatedWins + EnumChatFormatting.RESET;
+                    winsDisplay = EnumChatFormatting.DARK_GRAY.toString() + "-";
+                    winsColor = 0x555555;
                 } else if (!stats.hasApiError) {
                     String winsNumColor = stats.wins == 0 ? EnumChatFormatting.GRAY.toString() : EnumChatFormatting.GOLD.toString();
-                    winsDisplay = winsNumColor + stats.wins + EnumChatFormatting.RESET;
-                } else {
-                    winsDisplay = "";
+                    winsDisplay = winsNumColor + stats.wins + EnumChatFormatting.RESET.toString();
+                    winsColor = stats.wins == 0 ? 0x808080 : 0xFFD700;
                 }
-                fontRenderer.drawStringWithShadow(winsDisplay, adjustedColumnOffsets[4], rowY, 0xFFFFFF);
+                fontRenderer.drawStringWithShadow(winsDisplay, adjustedColumnOffsets[4], rowY, winsColor);
                 if (hasKills && stats.currentGameKills > 0) {
-                    String killsDisplay = EnumChatFormatting.DARK_RED + String.valueOf(stats.currentGameKills) + EnumChatFormatting.RESET;
+                    String killsDisplay = EnumChatFormatting.DARK_RED.toString() + String.valueOf(stats.currentGameKills) + EnumChatFormatting.RESET.toString();
                     fontRenderer.drawStringWithShadow(killsDisplay, killColumnOffset, rowY, 0xFFFFFF);
                 }
                 rowY += rowHeight;
@@ -341,40 +352,48 @@ public class RenderHandler {
         }
     }
 
-    private String getPlayerTag(String playerName, PlayerStats stats) {
+    private String getPlayerTag(String playerName, PlayerStats stats, boolean isNametag) {
+        if (isNametag) {
+            if (stats.isNick) {
+                return EnumChatFormatting.DARK_PURPLE.toString() + ConfigManager.translate("tag.nick");
+            } else if (stats.isQuerying) {
+                return EnumChatFormatting.GRAY.toString() + ConfigManager.translate("tag.querying");
+            }
+            return "";
+        }
         List<String> tags = new ArrayList<>();
         if (playerName.equals(mc.thePlayer.getName())) {
-            tags.add(EnumChatFormatting.BLUE + ConfigManager.translate("tag.user"));
+            tags.add(EnumChatFormatting.BLUE.toString() + ConfigManager.translate("tag.user"));
         }
         if (!stats.isNick && !stats.isQuerying && !stats.hasApiError && stats.kdr > 10) {
-            tags.add(EnumChatFormatting.RED + ConfigManager.translate("tag.bhop"));
+            tags.add(EnumChatFormatting.RED.toString() + ConfigManager.translate("tag.bhop"));
         }
         if (isGameStarted() && stats.isNearbyCached) {
-            tags.add(EnumChatFormatting.YELLOW + ConfigManager.translate("tag.nearby"));
+            tags.add(EnumChatFormatting.YELLOW.toString() + ConfigManager.translate("tag.nearby"));
         }
         if (stats.hasApiError) {
-            tags.add(EnumChatFormatting.DARK_RED + ConfigManager.translate("tag.api_error"));
+            tags.add(EnumChatFormatting.DARK_RED.toString() + ConfigManager.translate("tag.api_error"));
         } else if (stats.isNick) {
-            return EnumChatFormatting.DARK_PURPLE + ConfigManager.translate("tag.nick");
+            return EnumChatFormatting.DARK_PURPLE.toString() + ConfigManager.translate("tag.nick");
         } else if (stats.isQuerying) {
-            return EnumChatFormatting.GRAY + ConfigManager.translate("tag.querying");
+            return EnumChatFormatting.GRAY.toString() + ConfigManager.translate("tag.querying");
         } else if (stats.stars <= 1 && stats.wins == 0 && stats.kdr < 0.5) {
-            tags.add(EnumChatFormatting.DARK_GRAY + ConfigManager.translate("tag.noob"));
+            tags.add(EnumChatFormatting.DARK_GRAY.toString() + ConfigManager.translate("tag.noob"));
         }
         if (tags.size() > 1) {
             StringBuilder shortTags = new StringBuilder();
             for (int i = 0; i < tags.size(); i++) {
                 String tag = tags.get(i);
                 if (tag.contains(ConfigManager.translate("tag.user"))) {
-                    shortTags.append(EnumChatFormatting.BLUE).append("[U]");
+                    shortTags.append(EnumChatFormatting.BLUE.toString()).append("[U]");
                 } else if (tag.contains(ConfigManager.translate("tag.bhop"))) {
-                    shortTags.append(EnumChatFormatting.RED).append("[B]");
+                    shortTags.append(EnumChatFormatting.RED.toString()).append("[B]");
                 } else if (tag.contains(ConfigManager.translate("tag.nearby"))) {
-                    shortTags.append(EnumChatFormatting.YELLOW).append("[N]");
+                    shortTags.append(EnumChatFormatting.YELLOW.toString()).append("[N]");
                 } else if (tag.contains(ConfigManager.translate("tag.noob"))) {
-                    shortTags.append(EnumChatFormatting.DARK_GRAY).append("[N]");
+                    shortTags.append(EnumChatFormatting.DARK_GRAY.toString()).append("[N]");
                 } else if (tag.contains(ConfigManager.translate("tag.api_error"))) {
-                    shortTags.append(EnumChatFormatting.DARK_RED).append("[E]");
+                    shortTags.append(EnumChatFormatting.DARK_RED.toString()).append("[E]");
                 }
                 if (i < tags.size() - 1) {
                     shortTags.append(" ");
@@ -408,7 +427,7 @@ public class RenderHandler {
     private boolean isGameStarted() {
         if (mc.thePlayer != null) {
             float maxHealth = mc.thePlayer.getMaxHealth();
-            return maxHealth == 40.0f || maxHealth == 60.0f;
+            return maxHealth == 30.0f || maxHealth == 40.0f || maxHealth == 60.0f;
         }
         return false;
     }

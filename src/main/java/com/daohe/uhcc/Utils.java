@@ -1,4 +1,4 @@
-package com.daohe;
+package com.daohe.uhcc;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayer;
@@ -34,11 +34,5 @@ public class Utils {
         statsManager.playerStatsMap.clear();
         renderHandler.needsResort = true;
         renderHandler.getCachedSortedPlayers().clear();
-    }
-
-    public static boolean isApiKeyExpired() {
-        if (UHCCMod.apiKey.isEmpty() || ConfigManager.apiKeySetTime == 0) return false;
-        long currentTime = System.currentTimeMillis();
-        return (currentTime - ConfigManager.apiKeySetTime) > 24 * 60 * 60 * 1000;
     }
 }

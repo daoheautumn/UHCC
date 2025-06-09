@@ -1,4 +1,4 @@
-package com.daohe;
+package com.daohe.uhcc;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 public class PlayerStatsManager {
     private static final Minecraft mc = Minecraft.getMinecraft();
@@ -55,9 +56,9 @@ public class PlayerStatsManager {
         try {
             PlayerStats stats = playerStatsMap.get(playerName);
             if (stats == null || stats.isQuerying || stats.hasApiError || forceQuery) {
-                playerStatsMap.put(playerName, new PlayerStats(false, true));
+                playerStatsMap.putIfAbsent(playerName, new PlayerStats(false, true));
             }
-            Future<?> task = executor.submit(() -> getPlayerStats(playerName, forceQuery));
+            Future<?> task = executor.submit(() -> queryPlayerStats(playerName, forceQuery));
             playerQueryTasks.put(playerName, task);
             if (UHCCMod.debugMode) {
                 System.out.println("Query started for " + playerName + (forceQuery ? " (forced)" : ""));
@@ -99,62 +100,47 @@ public class PlayerStatsManager {
         }
     }
 
-    public PlayerStats getPlayerStats(String playerName) {
-        PlayerStats stats = playerStatsMap.get(playerName);
-        if (stats == null || stats.isQuerying || stats.hasApiError) {
-            submitPlayerQuery(playerName, false);
-            return playerStatsMap.getOrDefault(playerName, new PlayerStats(false, true));
+    public PlayerStats getPlayerStats(String playerName, boolean forceQuery) {
+        if (!playerName.matches("^[a-zA-Z0-9_]{3,16}$")) {
+            return new PlayerStats(false, false);
         }
-        if (statsCache.containsKey(playerName)) {
+        PlayerStats stats = playerStatsMap.get(playerName);
+        if (!forceQuery && stats != null && !stats.isQuerying && !stats.hasApiError) {
+            return stats;
+        }
+        if (!forceQuery && statsCache.containsKey(playerName)) {
             CachedPlayerStats cached = statsCache.get(playerName);
             if (System.currentTimeMillis() - cached.timestamp < CACHE_DURATION) {
                 stats = new PlayerStats(
                         cached.stars, cached.kills, cached.deaths, cached.kdr, cached.wins,
                         cached.score, cached.equippedKit, cached.artifacts
                 );
-                stats.isNick = false;
-                stats.isQuerying = true;
+                stats.isNick = cached.isNick;
+                stats.isQuerying = false;
                 stats.queryStartTime = System.currentTimeMillis();
-                playerStatsMap.put(playerName, stats);
-                if (UHCCMod.debugMode) {
-                    System.out.println("Loaded cached stats for " + playerName + ", starting delay");
+                if (!playerStatsMap.containsKey(playerName)) {
+                    playerStatsMap.put(playerName, stats);
                 }
-                final PlayerStats finalStats = stats;
-                final boolean isNick = cached.isNick;
-                executor.submit(() -> {
-                    try {
-                        long minDelay = 1000;
-                        double randomDelay = 500 + Math.random() * 1500;
-                        Thread.sleep(minDelay + (long) randomDelay);
-                        PlayerStats updatedStats = new PlayerStats(
-                                finalStats.stars, finalStats.kills, finalStats.deaths, finalStats.kdr,
-                                finalStats.wins, finalStats.score, finalStats.equippedKit, finalStats.artifacts
-                        );
-                        updatedStats.isNick = isNick;
-                        updatedStats.isQuerying = false;
-                        updatedStats.currentGameKills = finalStats.currentGameKills;
-                        if (updatedStats.isNick) {
-                            updatedStats.generateObfuscatedData();
-                        }
-                        playerStatsMap.put(playerName, updatedStats);
-                        if (UHCCMod.debugMode) {
-                            System.out.println("Finished delay for " + playerName);
-                        }
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                });
                 return stats;
             } else {
                 statsCache.remove(playerName);
-                submitPlayerQuery(playerName, false);
-                return playerStatsMap.getOrDefault(playerName, new PlayerStats(false, true));
             }
         }
-        return stats;
+        submitPlayerQuery(playerName, forceQuery);
+        Future<?> task = playerQueryTasks.get(playerName);
+        if (task != null) {
+            try {
+                task.get(10, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                if (UHCCMod.debugMode) {
+                    System.out.println("Query timeout or error for " + playerName + ": " + e.getMessage());
+                }
+            }
+        }
+        return playerStatsMap.getOrDefault(playerName, new PlayerStats(false, true));
     }
 
-    private void getPlayerStats(String playerName, boolean forceQuery) {
+    private void queryPlayerStats(String playerName, boolean forceQuery) {
         if (UHCCMod.apiKey.isEmpty()) {
             if (UHCCMod.debugMode) {
                 System.out.println("Query aborted for " + playerName + ": No API key");
@@ -162,7 +148,10 @@ public class PlayerStatsManager {
             return;
         }
         if (!playerName.matches("^[a-zA-Z0-9_]{3,16}$")) {
-            mc.thePlayer.addChatMessage(new ChatComponentText("Invalid player name: " + playerName));
+            PlayerStats stats = new PlayerStats(false, false);
+            stats.hasApiError = true;
+            playerStatsMap.put(playerName, stats);
+            playerQueryTasks.remove(playerName);
             return;
         }
         if (!forceQuery && statsCache.containsKey(playerName)) {
@@ -172,7 +161,7 @@ public class PlayerStatsManager {
                         cached.stars, cached.kills, cached.deaths, cached.kdr, cached.wins,
                         cached.score, cached.equippedKit, cached.artifacts
                 );
-                stats.isNick = false;
+                stats.isNick = cached.isNick;
                 stats.isQuerying = true;
                 stats.queryStartTime = System.currentTimeMillis();
                 playerStatsMap.put(playerName, stats);
@@ -180,19 +169,17 @@ public class PlayerStatsManager {
                 if (UHCCMod.debugMode) {
                     System.out.println("Loaded cached stats for " + playerName + ", starting delay");
                 }
-                final boolean isNick = cached.isNick;
                 try {
-                    long minDelay = 1000;
-                    double randomDelay = 500 + Math.random() * 1500;
+                    long minDelay = 500;
+                    double randomDelay = 0 + Math.random() * 500;
                     Thread.sleep(minDelay + (long) randomDelay);
                     stats.isQuerying = false;
-                    stats.isNick = isNick;
                     if (stats.isNick) {
                         stats.generateObfuscatedData();
                     }
                     playerStatsMap.put(playerName, stats);
                     if (UHCCMod.debugMode) {
-                        System.out.println("Finished delay for " + playerName);
+                        System.out.println("Finished delay for " + playerName + ", nickObfuscatedStars: " + stats.nickObfuscatedStars);
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -203,13 +190,12 @@ public class PlayerStatsManager {
             }
         }
         try {
+            if (UHCCMod.debugMode) {
+                System.out.println("Fetching UUID for " + playerName);
+            }
             String uuid = getUUIDFromMojang(playerName);
             if (uuid == null) {
-                PlayerStats existingStats = playerStatsMap.get(playerName);
-                if (existingStats != null && existingStats.isNick) {
-                    return;
-                }
-                PlayerStats nickStats = new PlayerStats(false, true);
+                PlayerStats nickStats = new PlayerStats(true, true);
                 playerStatsMap.put(playerName, nickStats);
                 playerQueryTasks.remove(playerName);
                 executor.submit(() -> {
@@ -223,7 +209,7 @@ public class PlayerStatsManager {
                         playerStatsMap.put(playerName, nickStats);
                         statsCache.put(playerName, new CachedPlayerStats(nickStats, System.currentTimeMillis()));
                         if (UHCCMod.debugMode) {
-                            System.out.println("Nick stats generated for " + playerName + " after delay");
+                            System.out.println("Nick stats generated for " + playerName + ", nickObfuscatedStars: " + nickStats.nickObfuscatedStars);
                         }
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
@@ -231,15 +217,25 @@ public class PlayerStatsManager {
                 });
                 return;
             }
+            if (UHCCMod.debugMode) {
+                System.out.println("Fetching Hypixel stats for " + playerName + " (UUID: " + uuid + ")");
+            }
             JsonObject hypixelResponse = getHypixelStats(uuid, playerName);
             if (hypixelResponse == null) {
+                PlayerStats stats = new PlayerStats(false, false);
+                stats.hasApiError = true;
+                playerStatsMap.put(playerName, stats);
+                playerQueryTasks.remove(playerName);
+                if (UHCCMod.debugMode) {
+                    System.out.println("Hypixel response null for " + playerName);
+                }
                 return;
             }
             if (hypixelResponse.get("success").getAsBoolean() && hypixelResponse.get("player").isJsonNull()) {
                 if (UHCCMod.debugMode) {
                     System.out.println(playerName + " marked as nick (Hypixel: success=true, player=null)");
                 }
-                PlayerStats nickStats = new PlayerStats(false, true);
+                PlayerStats nickStats = new PlayerStats(true, true);
                 playerStatsMap.put(playerName, nickStats);
                 playerQueryTasks.remove(playerName);
                 executor.submit(() -> {
@@ -253,7 +249,7 @@ public class PlayerStatsManager {
                         playerStatsMap.put(playerName, nickStats);
                         statsCache.put(playerName, new CachedPlayerStats(nickStats, System.currentTimeMillis()));
                         if (UHCCMod.debugMode) {
-                            System.out.println("Nick stats generated for " + playerName + " after delay");
+                            System.out.println("Nick stats generated for " + playerName + ", nickObfuscatedStars: " + nickStats.nickObfuscatedStars);
                         }
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
@@ -263,6 +259,13 @@ public class PlayerStatsManager {
             }
             JsonObject player = hypixelResponse.getAsJsonObject("player");
             if (player == null) {
+                PlayerStats stats = new PlayerStats(false, false);
+                stats.hasApiError = true;
+                playerStatsMap.put(playerName, stats);
+                playerQueryTasks.remove(playerName);
+                if (UHCCMod.debugMode) {
+                    System.out.println("Player data null for " + playerName);
+                }
                 return;
             }
             JsonObject stats = player.getAsJsonObject("stats");
@@ -287,7 +290,7 @@ public class PlayerStatsManager {
             String equippedKit = uhcStats.has("equippedKit") && !uhcStats.get("equippedKit").isJsonNull() ? uhcStats.get("equippedKit").getAsString() : "None";
             int totalKills = kills + killsSolo;
             int totalDeaths = deaths + deathsSolo;
-            double kdr = totalDeaths == 0 ? 0.0 : (double) totalKills / totalDeaths;
+            double kdr = totalDeaths == 0 ? (totalKills > 0 ? totalKills : 0.0) : (double) totalKills / totalDeaths;
             int totalWins = wins + winsSolo;
             int stars = calculateUHCStars(score);
             List<String> artifacts = new ArrayList<>();
@@ -306,10 +309,17 @@ public class PlayerStatsManager {
             playerStatsMap.put(playerName, statsData);
             playerQueryTasks.remove(playerName);
             statsCache.put(playerName, new CachedPlayerStats(statsData, System.currentTimeMillis()));
+            if (UHCCMod.debugMode) {
+                System.out.println("Stats retrieved for " + playerName + ": stars=" + stars + ", kdr=" + kdr + ", wins=" + totalWins);
+            }
         } catch (Exception e) {
             if (UHCCMod.debugMode) {
                 System.out.println("Unexpected error for " + playerName + ": " + e.getMessage());
             }
+            PlayerStats stats = new PlayerStats(false, false);
+            stats.hasApiError = true;
+            playerStatsMap.put(playerName, stats);
+            playerQueryTasks.remove(playerName);
         }
     }
 

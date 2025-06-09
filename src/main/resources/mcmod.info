@@ -2,11 +2,10 @@
 {
   "modid": "uhccmod",
   "name": "UHC Checker",
-  "description": "https://space.bilibili.com/511496730",
+  "description": "use \"/uc help\" for help",
   "version": "${version}",
   "mcversion": "${mcversion}",
-  "url": "https://github.com/daoheautumn/AutumnMod",
-  "updateUrl",: "",
+  "url": "https://github.com/daoheautumn/UHCC",
   "authorList": ["daoheautumn"],
   "credits": "",
   "logoFile": "nana7.png",

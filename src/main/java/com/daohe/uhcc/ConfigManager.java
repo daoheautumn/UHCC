@@ -1,11 +1,10 @@
-package com.daohe;
+package com.daohe.uhcc;
 
 import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.common.config.Property;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
-import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -13,10 +12,8 @@ public class ConfigManager {
     private final UHCCMod mod;
     private Configuration config;
     private static final DecimalFormat df = new DecimalFormat("#.##");
-    private static final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
     public static String currentLang = "en_US";
     private static final Map<String, Map<String, String>> languageMap = new HashMap<>();
-    public static long apiKeySetTime = 0;
     private static final Map<String, String> DEFAULT_ARTIFACTS_EN = new HashMap<>();
     private static final Map<String, String> DEFAULT_ARTIFACTS_CN = new HashMap<>();
 
@@ -81,18 +78,10 @@ public class ConfigManager {
         this.mod = mod;
     }
 
-    public void loadConfig(File configFile) {
+    public void loadConfig( File configFile) {
         config = new Configuration(configFile);
         config.load();
         UHCCMod.apiKey = config.getString("apiKey", Configuration.CATEGORY_GENERAL, "", "");
-        String apiKeyTimeStr = config.getString("apiKeySetTime", Configuration.CATEGORY_GENERAL, "", "");
-        if (!apiKeyTimeStr.isEmpty()) {
-            try {
-                apiKeySetTime = sdf.parse(apiKeyTimeStr).getTime();
-            } catch (Exception e) {
-                apiKeySetTime = 0;
-            }
-        }
         RenderHandler.overlayX = getFormattedFloat(config, "overlayX", Configuration.CATEGORY_GENERAL, 90.0f, -1000.0f, 1000.0f);
         RenderHandler.overlayY = getFormattedFloat(config, "overlayY", Configuration.CATEGORY_GENERAL, 10.0f, -1000.0f, 1000.0f);
         RenderHandler.overlayScale = getFormattedFloat(config, "overlayScale", Configuration.CATEGORY_GENERAL, 0.6f, 0.01f, 1.0f);

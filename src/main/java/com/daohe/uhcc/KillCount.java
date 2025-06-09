@@ -1,4 +1,4 @@
-package com.daohe;
+package com.daohe.uhcc;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.EnumChatFormatting;
@@ -23,7 +23,7 @@ public class KillCount {
     public void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END || mc.thePlayer == null || mc.theWorld == null) return;
         float maxHealth = mc.thePlayer.getMaxHealth();
-        if (!isGameActive && mod.isDetecting && (maxHealth == 40.0F || maxHealth == 60.0F)) {
+        if (!isGameActive && mod.isDetecting && (maxHealth == 30.0F || maxHealth == 40.0F || maxHealth == 60.0F)) {
             isGameActive = true;
             killCounts.clear();
             System.out.println("检测到血量变动/游戏开始");

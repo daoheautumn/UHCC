@@ -1,9 +1,7 @@
-package com.daohe;
+package com.daohe.uhcc;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.network.NetworkPlayerInfo;
-import net.minecraft.util.ChatComponentText;
-import net.minecraft.util.EnumChatFormatting;
 import net.minecraftforge.client.event.ClientChatReceivedEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.InputEvent;
@@ -47,13 +45,6 @@ public class EventHandler {
                     mod.getRenderHandler().needsResort = true;
                 }
             }
-        }
-        if (!UHCCMod.apiKey.isEmpty() && Utils.isApiKeyExpired()) {
-            mc.thePlayer.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + ConfigManager.translate("command.uc.setapi.expired")));
-            isStopped = true;
-            UHCCMod.isDetecting = false;
-            Utils.clearStatsAndResetTab(mod.getStatsManager(), mod.getRenderHandler());
-            mod.getStatsManager().cancelAllQueries();
         }
     }
 

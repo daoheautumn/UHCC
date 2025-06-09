@@ -1,4 +1,4 @@
-package com.daohe;
+package com.daohe.uhcc;
 
 import net.minecraft.command.ICommandSender;
 import net.minecraft.util.ChatComponentText;

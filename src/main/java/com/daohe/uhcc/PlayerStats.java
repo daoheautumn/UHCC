@@ -1,4 +1,4 @@
-package com.daohe;
+package com.daohe.uhcc;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,9 +19,9 @@ public class PlayerStats {
     public boolean isNearbyCached = false;
     public int currentGameKills;
     public long queryStartTime = 0;
-    public String nickObfuscatedStars = "";
-    public String nickObfuscatedKdr = "";
-    public String nickObfuscatedWins = "";
+    public String nickObfuscatedStars = "-";
+    public String nickObfuscatedKdr = "-";
+    public String nickObfuscatedWins = "-";
     private static final Random random = new Random();
 
     public PlayerStats(int stars, int kills, int deaths, double kdr, int wins, int score, String equippedKit, List<String> artifacts) {
@@ -79,11 +79,9 @@ public class PlayerStats {
     }
 
     public void generateObfuscatedData() {
-        this.nickObfuscatedStars = "§e§k" + (random.nextInt(10) + 1);
-        int kdrDigits = random.nextBoolean() ? 2 : 3;
-        this.nickObfuscatedKdr = "§c§k" + (kdrDigits == 2 ? random.nextInt(90) + 10 : random.nextInt(900) + 100);
-        int winsDigits = random.nextBoolean() ? 1 : 2;
-        this.nickObfuscatedWins = "§6§k" + (winsDigits == 1 ? random.nextInt(9) + 1 : random.nextInt(90) + 10);
+        this.nickObfuscatedStars = "-";
+        this.nickObfuscatedKdr = "-";
+        this.nickObfuscatedWins = "-";
     }
 
     public double getKdr() {
